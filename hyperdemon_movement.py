@@ -1035,7 +1035,7 @@ def check_pellet_hits_spawners(player, spawners):
     player.pellets = alive_pellets
 
 
-def draw_spawners(spawners):
+def draw_spawners(spawners, sphere_dl=None):
     """Render spawners as large rotating diamond/rhombus structures."""
     fire_t = g_frame_time
 
@@ -1405,8 +1405,6 @@ def update_ammonites(ammonites, player, dt, pickup_sounds=None):
         if not am.alive:
             continue
 
-        # Slow rotation
-        am.rotation += 30.0 * dt
         am.bob_phase += dt * 2.0
 
         # Distance to player
@@ -1418,26 +1416,34 @@ def update_ammonites(ammonites, player, dt, pickup_sounds=None):
         # Chase when close — aggressively pursue the player
         if dist < AMMONITE_AGGRO_RANGE and dist > 1.0:
             nx, ny, nz = dx / dist, dy / dist, dz / dist
-            # Stronger acceleration when closer (ramp up urgency)
             close_factor = 1.0 + (1.0 - dist / AMMONITE_AGGRO_RANGE) * 2.0
             accel = AMMONITE_ACCEL * close_factor
             am.vel[0] += nx * accel * dt
             am.vel[1] += ny * accel * dt
             am.vel[2] += nz * accel * dt
         else:
-            # Lazy orbit around group center
+            # Lazy meandering orbit around group center
             am.orbit_phase += am.orbit_speed * dt
             target_x = am.group_center[0] + math.cos(am.orbit_phase) * am.orbit_radius
             target_z = am.group_center[1] + math.sin(am.orbit_phase) * am.orbit_radius
             ox = target_x - am.pos[0]
             oz = target_z - am.pos[2]
-            am.vel[0] += ox * 2.0 * dt
-            am.vel[2] += oz * 2.0 * dt
+            # Gentle steering toward orbit target
+            am.vel[0] += ox * 1.2 * dt
+            am.vel[2] += oz * 1.2 * dt
+
+        # Bank into turns — rotation follows movement direction
+        hspeed = math.sqrt(am.vel[0]**2 + am.vel[2]**2)
+        if hspeed > 5.0:
+            target_rot = math.degrees(math.atan2(am.vel[0], am.vel[2]))
+            # Smooth rotation toward movement direction
+            diff = (target_rot - am.rotation + 180) % 360 - 180
+            am.rotation += diff * 3.0 * dt
 
         # Hover height spring
-        target_y = AMMONITE_HOVER_HEIGHT + math.sin(am.bob_phase) * 10.0
+        target_y = AMMONITE_HOVER_HEIGHT + math.sin(am.bob_phase) * 15.0
         height_err = target_y - am.pos[1]
-        am.vel[1] += height_err * 3.0 * dt
+        am.vel[1] += height_err * 2.0 * dt
 
         # Drag
         drag = math.exp(-AMMONITE_DRAG * dt)
