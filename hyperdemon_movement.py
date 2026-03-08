@@ -42,18 +42,19 @@ except ImportError:
 # =============================================================================
 # Physics Constants (Quake-like, tuned for Hyperdemon feel)
 # =============================================================================
-GRAVITY = 1957.0
-GROUND_ACCEL = 35.0
-GROUND_MAX_SPEED = 1117.0
+GAME_SPEED = 1.75  # global time scale multiplier
+GRAVITY = 749.0
+GROUND_ACCEL = 20.0
+GROUND_MAX_SPEED = 638.0
 GROUND_FRICTION = 6.0
-AIR_ACCEL = 42.0
-AIR_MAX_SPEED = 140.0  # wishdir clamp for air strafing
-JUMP_VELOCITY = 1048.0
-DASH_IMPULSE = 19901.0       # initial burst — the "fast" stage
+AIR_ACCEL = 24.0
+AIR_MAX_SPEED = 80.0  # wishdir clamp for air strafing
+JUMP_VELOCITY = 599.0
+DASH_IMPULSE = 11372.0       # initial burst — the "fast" stage
 DASH_DRAG = 4.0             # lower drag = longer tail-end glide
-FAST_DASH_IMPULSE = 24787.0
-SLIDE_DASH_IMPULSE = 11522.0
-STOMP_VELOCITY = -4190.0
+FAST_DASH_IMPULSE = 14164.0
+SLIDE_DASH_IMPULSE = 6584.0
+STOMP_VELOCITY = -2394.0
 SLIDE_FRICTION = 1.5
 SLIDE_MIN_SPEED = 50.0
 BUNNY_HOP_BONUS = 1.05  # fallback speed multiplier (non-slide jumps)
@@ -76,7 +77,7 @@ DASH_DOUBLETAP_MAX = 0.5   # maximum gap — too slow = no dash
 
 # Enemies
 SKULL_COUNT = 8
-SKULL_SPEED = 1136.0
+SKULL_SPEED = 649.0
 SKULL_RADIUS = 20.0  # collision/body radius
 SKULL_WEAKSPOT_RADIUS = 8.0  # weak spot sized to match shotgun spread
 SKULL_HP = 40
@@ -103,17 +104,17 @@ SKULL_WARN_RADIUS = 500.0  # red hologram overlay starts at this distance
 # Ammonites (flat floating spiral enemies)
 AMMONITE_COUNT = 3  # initial count
 AMMONITE_HP = 120
-AMMONITE_RADIUS = 60.0  # collision radius
-AMMONITE_SPEED = 700.0
-AMMONITE_ACCEL = 875.0
+AMMONITE_RADIUS = 180.0  # collision radius
+AMMONITE_SPEED = 400.0
+AMMONITE_ACCEL = 500.0
 AMMONITE_DRAG = 2.5
 AMMONITE_AGGRO_RANGE = 600.0  # only chases when player is this close
 AMMONITE_HOVER_HEIGHT = 80.0
 AMMONITE_PELLET_DAMAGE = 10
 AMMONITE_CORPSE_RADIUS = 50.0  # touch radius for corpse pickup
-AMMONITE_CORPSE_REVIVE = 3.0  # seconds before corpse revives
-AMMONITE_BOOST_FORWARD = 12600.0  # forward boost on corpse pickup (mega dash)
-AMMONITE_BOOST_UP = 12600.0  # upward boost - equal to forward for 45° launch
+AMMONITE_CORPSE_REVIVE = 6.0  # seconds before corpse revives
+AMMONITE_BOOST_FORWARD = 900.0  # forward boost on corpse pickup (like a dash)
+AMMONITE_BOOST_UP = 900.0  # upward boost - equal to forward for 45° launch
 AMMONITE_SPAWN_RANGE = 1800.0
 AMMONITE_MIN_DIST = 500.0
 AMMONITE_MAX = 6
@@ -126,9 +127,9 @@ PLAYER_MAX_HP = 100
 SHOTGUN_COOLDOWN = 0.75
 SHOTGUN_PELLET_COUNT = 59
 SHOTGUN_SPREAD = 7.5  # degrees
-SHOTGUN_PELLET_SPEED = 3491.0
+SHOTGUN_PELLET_SPEED = 1995.0
 SHOTGUN_PELLET_LIFETIME = 1.2  # seconds
-SHOTGUN_KNOCKBACK = 1454.0  # thrust applied to player opposite to firing direction
+SHOTGUN_KNOCKBACK = 831.0  # thrust applied to player opposite to firing direction
 
 # Diagonal speed factor (sqrt(2)/2 normalized but slightly boosted)
 DIAGONAL_BONUS = 1.05
@@ -208,6 +209,10 @@ class Player:
         # Shotgun
         self.shotgun_cooldown = 0.0
         self.pellets = []  # list of [pos_x, pos_y, pos_z, vel_x, vel_y, vel_z, life]
+
+        # Ammonite corpse combo
+        self.ammonite_combo = 0
+        self.ammonite_combo_timer = 0.0
 
         # Stats
         self.speed = 0.0
@@ -418,12 +423,15 @@ def update_player(player, keys, dt):
                 # Pure side dashes are always "normal" (no fast/slide variant)
                 has_pure_side = ((keys[K_a] or keys[K_d]) and
                                  not keys[K_w] and not keys[K_s])
-                player.dash_dir = [wish_dir[0], 0.0, wish_dir[2]]
+                # Dash in the direction the player is looking (full 3D)
+                look = player.get_look_dir()
+                player.dash_dir = [look[0], look[1], look[2]]
                 player.dash_type = "normal"
                 player.dash_duration = DASH_DURATION
                 player.dash_can_upgrade = not has_pure_side
                 impulse = DASH_IMPULSE
                 player.vel[0] = player.dash_dir[0] * impulse
+                player.vel[1] = player.dash_dir[1] * impulse
                 player.vel[2] = player.dash_dir[2] * impulse
                 player.state = STATE_DASHING
                 player.dash_timer = 0.0
@@ -469,6 +477,7 @@ def update_player(player, keys, dt):
         # 2-stage dash: aggressive drag bleeds the initial burst into a slower glide
         drag = math.exp(-DASH_DRAG * dt)
         player.vel[0] *= drag
+        player.vel[1] *= drag  # drag applies to full 3D dash direction
         player.vel[2] *= drag
 
         # Slight steering mid-dash
@@ -477,8 +486,10 @@ def update_player(player, keys, dt):
             player.vel[0] += wish_dir[0] * steer * abs(player.vel[0] + 1)
             player.vel[2] += wish_dir[2] * steer * abs(player.vel[2] + 1)
 
-        # Gravity (reduced during dash)
-        player.vel[1] -= GRAVITY * 0.3 * dt
+        # Gravity scaled by how horizontal the dash is (less gravity when dashing vertically)
+        vert_component = abs(player.dash_dir[1])
+        gravity_scale = 0.3 * (1.0 - vert_component * 0.9)  # near-zero gravity when dashing straight down/up
+        player.vel[1] -= GRAVITY * gravity_scale * dt
 
         # Check if dash is over
         if player.dash_timer >= player.dash_duration:
@@ -749,9 +760,9 @@ def draw_pellets(player):
 # Enemies - Flaming Skulls
 # =============================================================================
 
-SKULL_ACCEL = 1454.0  # how fast skulls accelerate toward player
+SKULL_ACCEL = 831.0  # how fast skulls accelerate toward player
 SKULL_DRAG = 2.0  # air drag on skull velocity
-SKULL_TARGET_HEIGHT = PLAYER_HEIGHT * 0.9  # preferred hover height
+SKULL_TARGET_HEIGHT_BASE = PLAYER_HEIGHT * 0.9  # base hover height
 SKULL_HEIGHT_ACCEL = 300.0  # vertical correction force
 
 
@@ -768,6 +779,7 @@ class Skull:
         self.fire_phase = random.uniform(0, math.pi * 2)
         self.weakspot_angle = 0.0
         self.damage_numbers = []
+        self.hover_offset = random.uniform(-30, 120)  # varied flying heights
 
     def weakspot_pos(self):
         """World position of the weak spot (back of skull)."""
@@ -811,11 +823,11 @@ def update_skulls(skulls, player, dt):
             skull.vel[1] += ny * SKULL_ACCEL * dt
             skull.vel[2] += nz * SKULL_ACCEL * dt
 
-        # Vertical correction: prefer hovering near target height with bob
+        # Vertical correction: loose spring toward varied hover height (floaty swarm)
         skull.bob_phase += dt * 2.5
-        target_y = SKULL_TARGET_HEIGHT + math.sin(skull.bob_phase) * 8.0
+        target_y = SKULL_TARGET_HEIGHT_BASE + skull.hover_offset + math.sin(skull.bob_phase) * 15.0
         height_err = target_y - skull.pos[1]
-        skull.vel[1] += height_err * 3.0 * dt  # soft spring toward target height
+        skull.vel[1] += height_err * 1.0 * dt  # very soft spring - floaty
 
         # Drag (limits top speed, gives weight/momentum feel)
         drag = math.exp(-SKULL_DRAG * dt)
@@ -968,11 +980,11 @@ def update_spawners(spawners, skulls, player, dt):
             if sp.spawn_tick <= 0:
                 skull = Skull(sp.pos[0], sp.pos[2])
                 skull.pos[1] = sp.pos[1] + SPAWNER_RADIUS * 0.8
-                # Volcanic eruption - mostly straight up with some horizontal scatter
+                # Volcanic eruption - blast them skyward
                 angle = random.uniform(0, math.pi * 2)
-                horiz_spread = random.uniform(100, 400)  # slight random scatter
+                horiz_spread = random.uniform(400, 1200)
                 skull.vel[0] = math.cos(angle) * horiz_spread
-                skull.vel[1] = random.uniform(1400, 2200)  # massive upward launch
+                skull.vel[1] = random.uniform(5000, 8000)  # massive upward launch
                 skull.vel[2] = math.sin(angle) * horiz_spread
                 skulls.append(skull)
                 sp.spawn_queue -= 1
@@ -1260,22 +1272,50 @@ class Ammonite:
         self.is_corpse = False
         self.corpse_timer = 0.0
         self.corpse_fall_vel = 0.0
+        # Group orbit
+        self.group_center = [x, z]  # shared center for orbit
+        self.orbit_phase = 0.0  # current angle in orbit
+        self.orbit_radius = 200.0  # distance from group center
+        self.orbit_speed = random.uniform(0.4, 0.8)  # radians per second
+
+
+_ammonite_group_id = [0]
+
+def _spawn_ammonite_group(cx, cz):
+    """Spawn a group of 3 ammonites near a center point."""
+    group = []
+    for i in range(3):
+        offset_angle = (i / 3) * math.pi * 2 + random.uniform(-0.3, 0.3)
+        offset_dist = random.uniform(120, 270)
+        x = cx + math.cos(offset_angle) * offset_dist
+        z = cz + math.sin(offset_angle) * offset_dist
+        am = Ammonite(x, z)
+        am.group_center = [cx, cz]
+        am.orbit_phase = (i / 3) * math.pi * 2
+        am.orbit_radius = offset_dist
+        group.append(am)
+    return group
 
 
 def create_ammonites(player_pos, count=AMMONITE_COUNT):
-    """Create initial ammonites around the player."""
+    """Create initial ammonite groups around the player."""
     ammonites = []
     for _ in range(count):
         angle = random.uniform(0, math.pi * 2)
         dist = random.uniform(AMMONITE_MIN_DIST, AMMONITE_SPAWN_RANGE)
-        x = player_pos[0] + math.cos(angle) * dist
-        z = player_pos[2] + math.sin(angle) * dist
-        ammonites.append(Ammonite(x, z))
+        cx = player_pos[0] + math.cos(angle) * dist
+        cz = player_pos[2] + math.sin(angle) * dist
+        ammonites.extend(_spawn_ammonite_group(cx, cz))
     return ammonites
 
 
-def update_ammonites(ammonites, player, dt):
+def update_ammonites(ammonites, player, dt, pickup_sounds=None):
     """Update ammonites: chase when close, handle corpse state."""
+    # Tick combo timer
+    if player.ammonite_combo_timer > 0:
+        player.ammonite_combo_timer -= dt
+        if player.ammonite_combo_timer <= 0:
+            player.ammonite_combo = 0
     alive_list = []
     for am in ammonites:
         # Tick damage numbers
@@ -1326,6 +1366,12 @@ def update_ammonites(ammonites, player, dt):
                     player.pos[1] = player.current_height + 5.0  # lift off ground to prevent floor clamp
                     player.state = STATE_AIRBORNE
                     player.has_dashed = False
+                    # Play combo sound
+                    if pickup_sounds:
+                        idx = min(player.ammonite_combo, len(pickup_sounds) - 1)
+                        pickup_sounds[idx].play()
+                    player.ammonite_combo += 1
+                    player.ammonite_combo_timer = 5.0
                     am.is_corpse = False
                     am.alive = False
                     continue
@@ -1355,12 +1401,21 @@ def update_ammonites(ammonites, player, dt):
         dz = player.pos[2] - am.pos[2]
         dist = math.sqrt(dx*dx + dy*dy + dz*dz)
 
-        # Only chase when close
+        # Chase when close, otherwise lazy orbit around group center
         if dist < AMMONITE_AGGRO_RANGE and dist > 1.0:
             nx, ny, nz = dx / dist, dy / dist, dz / dist
             am.vel[0] += nx * AMMONITE_ACCEL * dt
             am.vel[1] += ny * AMMONITE_ACCEL * dt
             am.vel[2] += nz * AMMONITE_ACCEL * dt
+        else:
+            # Lazy orbit around group center
+            am.orbit_phase += am.orbit_speed * dt
+            target_x = am.group_center[0] + math.cos(am.orbit_phase) * am.orbit_radius
+            target_z = am.group_center[1] + math.sin(am.orbit_phase) * am.orbit_radius
+            ox = target_x - am.pos[0]
+            oz = target_z - am.pos[2]
+            am.vel[0] += ox * 2.0 * dt
+            am.vel[2] += oz * 2.0 * dt
 
         # Hover height spring
         target_y = AMMONITE_HOVER_HEIGHT + math.sin(am.bob_phase) * 10.0
@@ -2429,6 +2484,33 @@ def generate_shotgun_sound():
     return sound
 
 
+def generate_ammonite_pickup_sounds(count=8):
+    """Generate a series of corpse pickup sounds at increasing pitches for combos."""
+    sounds = []
+    sample_rate = 44100
+    duration = 0.12
+    n_samples = int(sample_rate * duration)
+    for level in range(count):
+        # Base freq rises with combo level
+        base_freq = 500 + level * 200
+        samples = array.array("h")
+        for i in range(n_samples):
+            t = i / sample_rate
+            env = math.exp(-t * 35)
+            # Bright chime: main tone + octave + shimmer
+            tone = math.sin(2 * math.pi * base_freq * t) * 0.45
+            octave = math.sin(2 * math.pi * base_freq * 2 * t) * 0.3
+            shimmer = math.sin(2 * math.pi * base_freq * 3.5 * t) * math.exp(-t * 60) * 0.2
+            thud = math.sin(2 * math.pi * 150 * t) * math.exp(-t * 50) * 0.15
+            sample = int(env * (tone + octave + shimmer + thud) * 14000)
+            sample = max(-32768, min(32767, sample))
+            samples.append(sample)
+        sound = pygame.mixer.Sound(buffer=samples)
+        sound.set_volume(0.45)
+        sounds.append(sound)
+    return sounds
+
+
 def main():
     pygame.init()
     pygame.font.init()
@@ -2437,6 +2519,7 @@ def main():
     bhop_sound = generate_bhop_sound()
     land_sound = generate_land_sound()
     shotgun_sound = generate_shotgun_sound()
+    ammonite_pickup_sounds = generate_ammonite_pickup_sounds()
 
     screen_w, screen_h = 1280, 720
     screen = pygame.display.set_mode((screen_w, screen_h), DOUBLEBUF | OPENGL | RESIZABLE)
@@ -2486,6 +2569,7 @@ def main():
     while running:
         dt = clock.tick(144) / 1000.0
         dt = min(dt, 0.05)  # clamp to avoid physics explosions
+        dt *= GAME_SPEED  # global time scale
         fps = clock.get_fps()
 
         # Reset per-frame flags
@@ -2564,7 +2648,7 @@ def main():
             # Still update skulls/damage numbers while dead
             skulls = update_skulls(skulls, player, dt)
             spawners = update_spawners(spawners, skulls, player, dt)
-            ammonites = update_ammonites(ammonites, player, dt)
+            ammonites = update_ammonites(ammonites, player, dt, ammonite_pickup_sounds)
         else:
             # Update physics
             update_player(player, keys, dt)
@@ -2574,17 +2658,16 @@ def main():
             check_pellet_hits_ammonites(player, ammonites)
             skulls = update_skulls(skulls, player, dt)
             spawners = update_spawners(spawners, skulls, player, dt)
-            ammonites = update_ammonites(ammonites, player, dt)
+            ammonites = update_ammonites(ammonites, player, dt, ammonite_pickup_sounds)
 
-            # Spawn new ammonites periodically
+            # Spawn new ammonite groups periodically
             if len([a for a in ammonites if a.alive or a.is_corpse]) < AMMONITE_MAX:
                 if random.random() < 0.005:  # ~every few seconds
                     angle = random.uniform(0, math.pi * 2)
                     dist = random.uniform(AMMONITE_MIN_DIST, AMMONITE_SPAWN_RANGE)
-                    ammonites.append(Ammonite(
-                        player.pos[0] + math.cos(angle) * dist,
-                        player.pos[2] + math.sin(angle) * dist,
-                    ))
+                    cx = player.pos[0] + math.cos(angle) * dist
+                    cz = player.pos[2] + math.sin(angle) * dist
+                    ammonites.extend(_spawn_ammonite_group(cx, cz))
 
             # Spawn new spawners periodically
             spawner_new_timer += dt

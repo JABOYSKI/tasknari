@@ -639,12 +639,24 @@
       Remember Gist ID &amp; token
     </label>
     <div id="splashError" class="hidden" style="color:var(--danger);font-size:.82rem;margin-top:-4px;text-align:left"></div>
-    <button id="splashConfirm" class="btn btn-primary" style="width:100%;margin-top:4px">Pull &amp; Open</button>
+    <button id="splashConfirm" class="btn btn-primary" style="width:100%;margin-top:4px">Log In</button>
     <button id="splashOffline" class="btn hidden" style="width:100%;margin-top:8px;background:transparent;border-color:var(--border);color:var(--muted-color)">Work Offline (use last saved data)</button>
   </div>
 </div>
   <div id="syncBarWrap" aria-live="polite" aria-label="Sync in progress"><div id="syncBar"></div></div>
   <div id="toast"><span id="toastMsg"></span><button id="toastUndo" style="display:none">Undo</button></div>
+
+  <!-- Offline sync conflict dialog -->
+  <div id="syncConflict" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:24px">
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.6)">
+      <div style="font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px">Back Online</div>
+      <div style="font-size:.87rem;color:var(--muted-color);line-height:1.55;margin-bottom:20px">You made changes while offline. What would you like to do?</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button id="syncConflictPush" class="btn btn-primary" style="width:100%;padding:10px">Push my offline changes → Gist</button>
+        <button id="syncConflictPull" class="btn" style="width:100%;padding:10px;color:var(--muted-color)">Discard — pull Gist as source of truth</button>
+      </div>
+    </div>
+  </div>
 
   <header>
     <div class="row">
@@ -688,6 +700,8 @@
         <button class="btn" id="exportAll">Export</button>
         <label class="btn" for="importInput">Import</label>
         <input id="importInput" class="hidden" type="file" accept="application/json"/>
+        <span style="border-left:1px solid var(--border);margin:0 4px;align-self:stretch"></span>
+        <button class="btn btn-danger" id="logoutBtn">Log Out</button>
       </div>
     </div>
   </header>
@@ -889,12 +903,26 @@
 
       const STORAGE_KEYS = { tasks:'todo_applet_tasks_v1', done:'todo_applet_done_v1', quest:'todo_quest_ids_v1' };
       const GIST_SETTINGS_KEY = 'todo_gist_settings_v1';
+      const DIRTY_KEY = 'tasknari_offline_dirty';
+      const SESSION_KEY = 'tasknari_session_v1';
+      const SESSION_DURATION = 30 * 60 * 1000; // 30 minutes
+
+      function touchSession(){ localStorage.setItem(SESSION_KEY, Date.now()); }
+      function sessionValid(){ const t=parseInt(localStorage.getItem(SESSION_KEY)||'0'); return Date.now()-t < SESSION_DURATION; }
       const ui = { editTaskId:null, editStartId:null, showDone:true, dirHandle:null, autoSave:false, lineModeGlobal:false, doneYear:null };
 
       function now(){ return Date.now(); }
       function uid(){ return Math.random().toString(36).slice(2)+now().toString(36); }
       function load(k,f){ try{const r=localStorage.getItem(k); return r?JSON.parse(r):f;}catch{return f;} }
-      function save(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch{} }
+      function save(k,v){
+        try{ localStorage.setItem(k,JSON.stringify(v)); }catch{}
+        // Mark dirty only for data keys (not settings), and only when offline
+        if(!navigator.onLine && Object.values(STORAGE_KEYS).includes(k)){
+          localStorage.setItem(DIRTY_KEY,'1');
+        }
+      }
+      function clearDirty(){ localStorage.removeItem(DIRTY_KEY); }
+      function isDirty(){ return localStorage.getItem(DIRTY_KEY)==='1'; }
 
       let tasks = load(STORAGE_KEYS.tasks, []);
       let done  = load(STORAGE_KEYS.done, []);
@@ -1907,6 +1935,16 @@
         splashRemember.checked = !!saved.remember;
         // Show offline option only if there is already data saved locally
         if(saved.id) splashOffline.classList.remove('hidden');
+
+        // Skip splash if session is still valid (within 30 minutes)
+        if(sessionValid() && saved.id){
+          el.gist.id.value = saved.id;
+          if(saved.remember && saved.token) el.gist.token.value = saved.token;
+          el.gist.remember.checked = !!saved.remember;
+          dismissSplash();
+          return;
+        }
+
         // Focus the empty field (or token if id already filled)
         setTimeout(()=>{ (saved.id ? splashToken : splashGistId).focus(); }, 350);
 
@@ -1935,20 +1973,21 @@
             if(remember && tok) obj.token = tok;
             localStorage.setItem(GIST_SETTINGS_KEY, JSON.stringify(obj));
             el.gist.remember.checked = remember;
+            touchSession();
             dismissSplash();
           } catch(err) {
             splashError.textContent = err.message || 'Pull failed — check your Gist ID and token.';
             splashError.classList.remove('hidden');
             splashConfirm.disabled = false;
-            splashConfirm.textContent = 'Pull & Open';
+            splashConfirm.textContent = 'Log In';
           }
         });
 
         splashOffline.addEventListener('click', ()=>{
-          // Populate header fields from saved credentials so settings panel still works
           el.gist.id.value = saved.id || '';
           if(saved.remember && saved.token) el.gist.token.value = saved.token;
           el.gist.remember.checked = !!saved.remember;
+          touchSession();
           dismissSplash();
         });
 
@@ -2017,6 +2056,7 @@
             tasks=Array.isArray(remote.tasks)?remote.tasks:[]; done=Array.isArray(remote.done)?remote.done:[];
             if(Array.isArray(remote.ids)) ids=remote.ids;
             save(STORAGE_KEYS.tasks,tasks); save(STORAGE_KEYS.done,done); save(IDS_KEY,ids); render(); renderIds();
+            clearDirty();
             showToast('Pulled from Gist');
           }
         } finally { syncEnd(); }
@@ -2028,6 +2068,7 @@
           const id=el.gist.id.value.trim(); if(!id){ showError('Enter your Gist ID in Settings'); return; }
           const body={ files:{ 'todo-data.json':{ content:JSON.stringify({tasks,done,ids,updatedAt:new Date().toISOString()},null,2) } } };
           await gistFetch(`/gists/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+          clearDirty();
           showToast('Pushed to Gist');
         } finally { syncEnd(); }
       }
@@ -2037,6 +2078,24 @@
 
       el.gist.loadBtn.addEventListener('click', ()=> pullFromGist().catch(err=>showError(err.message||err)));
       el.gist.saveBtn.addEventListener('click', ()=> pushToGist().catch(err=>showError(err.message||err)));
+
+      /* ===== Offline → Online conflict resolution ===== */
+      const syncConflict = document.getElementById('syncConflict');
+      document.getElementById('syncConflictPush').addEventListener('click', async ()=>{
+        syncConflict.style.display='none';
+        clearDirty();
+        await pushToGist().catch(err=>showError(err.message||err));
+      });
+      document.getElementById('syncConflictPull').addEventListener('click', async ()=>{
+        syncConflict.style.display='none';
+        clearDirty();
+        await pullFromGist().catch(err=>showError(err.message||err));
+      });
+      window.addEventListener('online', ()=>{
+        if(isDirty() && el.gist.id.value.trim()){
+          syncConflict.style.display='flex';
+        }
+      });
 
       /* ===== Prominent Save button ===== */
       const saveBtn = document.getElementById('saveBtn');
@@ -2064,6 +2123,11 @@
       el.gist.remember.addEventListener('change', saveGistSettings);
       el.gist.id.addEventListener('blur', saveGistSettings);
       el.gist.token.addEventListener('blur', saveGistSettings);
+
+      document.getElementById('logoutBtn').addEventListener('click', ()=>{
+        localStorage.removeItem(SESSION_KEY);
+        window.location.reload();
+      });
 
       /* ===== Tab switching ===== */
       const tabBtns = document.querySelectorAll('.tab-btn');
