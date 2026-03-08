@@ -78,8 +78,8 @@ DASH_DOUBLETAP_MAX = 0.5   # maximum gap — too slow = no dash
 # Enemies
 SKULL_COUNT = 8
 SKULL_SPEED = 649.0
-SKULL_RADIUS = 20.0  # collision/body radius
-SKULL_WEAKSPOT_RADIUS = 8.0  # weak spot sized to match shotgun spread
+SKULL_RADIUS = 40.0  # collision/body radius
+SKULL_WEAKSPOT_RADIUS = 16.0  # weak spot sized to match shotgun spread
 SKULL_HP = 40
 SKULL_SPAWN_RANGE = 2000.0
 SKULL_MIN_DIST = 300.0  # minimum spawn distance from player
@@ -1368,6 +1368,7 @@ def update_ammonites(ammonites, player, dt, pickup_sounds=None):
                     player.pos[1] = player.current_height + 5.0  # lift off ground to prevent floor clamp
                     player.state = STATE_AIRBORNE
                     player.has_dashed = False
+                    player.dash_cooldown_timer = 0.0
                     # Play combo sound
                     if pickup_sounds:
                         idx = min(player.ammonite_combo, len(pickup_sounds) - 1)
