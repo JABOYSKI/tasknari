@@ -6,7 +6,7 @@ for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set DT
 set TIMESTAMP=%DT:~0,12%
 
 :: Get human-readable date e.g. "Mar 8, 2026"
-for /f "delims=" %%D in ('powershell -Command "Get-Date -Format \"MMM d, yyyy\""') do set READABLE_DATE=%%D
+for /f "delims=" %%D in ('powershell -Command "Get-Date -Format \"MMM d, yyyy HH:mm:ss\""') do set READABLE_DATE=%%D
 
 :: Stamp sw.js cache name with timestamp
 powershell -Command "(Get-Content sw.js) -replace 'tasknari-BUILD_TIMESTAMP', 'tasknari-%TIMESTAMP%' | Set-Content sw.js"

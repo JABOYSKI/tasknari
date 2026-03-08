@@ -91,7 +91,7 @@ SKULL_MAX = 30  # cap on total skulls
 SPAWNER_COUNT = 4  # initial spawners
 SPAWNER_HP = 800
 SPAWNER_REGEN = 80.0  # HP regenerated per second
-SPAWNER_RADIUS = 72.8  # collision radius (50% larger)
+SPAWNER_RADIUS = 364.0  # collision radius (5x original)
 SPAWNER_SPAWN_INTERVAL = 15.0  # seconds between skull spawns
 SPAWNER_SPAWN_RANGE = 1500.0  # how far from player spawners appear
 SPAWNER_MIN_DIST = 400.0  # minimum spawn distance from player
@@ -111,7 +111,7 @@ AMMONITE_DRAG = 2.5
 AMMONITE_AGGRO_RANGE = 600.0  # only chases when player is this close
 AMMONITE_HOVER_HEIGHT = 80.0
 AMMONITE_PELLET_DAMAGE = 10
-AMMONITE_CORPSE_RADIUS = 50.0  # touch radius for corpse pickup
+AMMONITE_CORPSE_RADIUS = AMMONITE_RADIUS  # touch radius matches visual size
 AMMONITE_CORPSE_REVIVE = 6.0  # seconds before corpse revives
 AMMONITE_BOOST_FORWARD = 900.0  # forward boost on corpse pickup (like a dash)
 AMMONITE_BOOST_UP = 900.0  # upward boost - equal to forward for 45° launch
@@ -984,9 +984,9 @@ def update_spawners(spawners, skulls, player, dt):
                 skull.pos[1] = sp.pos[1] + SPAWNER_RADIUS * 0.8
                 # Volcanic eruption - blast them skyward
                 angle = random.uniform(0, math.pi * 2)
-                horiz_spread = random.uniform(400, 1200)
+                horiz_spread = random.uniform(800, 2400)
                 skull.vel[0] = math.cos(angle) * horiz_spread
-                skull.vel[1] = random.uniform(5000, 8000)  # massive upward launch
+                skull.vel[1] = random.uniform(20000, 32000)  # volcanic eruption
                 skull.vel[2] = math.sin(angle) * horiz_spread
                 skulls.append(skull)
                 sp.spawn_queue -= 1
@@ -1026,7 +1026,7 @@ def check_pellet_hits_spawners(player, spawners):
 
 def draw_spawners(spawners):
     """Render spawners as large rotating diamond/rhombus structures."""
-    fire_t = time.time()
+    fire_t = g_frame_time
 
     for sp in spawners:
         if not sp.alive:
@@ -1288,7 +1288,7 @@ def _spawn_ammonite_group(cx, cz):
     group = []
     for i in range(3):
         offset_angle = (i / 3) * math.pi * 2 + random.uniform(-0.3, 0.3)
-        offset_dist = random.uniform(120, 270)
+        offset_dist = random.uniform(240, 540)
         x = cx + math.cos(offset_angle) * offset_dist
         z = cz + math.sin(offset_angle) * offset_dist
         am = Ammonite(x, z)
@@ -1351,7 +1351,7 @@ def update_ammonites(ammonites, player, dt, pickup_sounds=None):
                 dy = player.pos[1] - am.pos[1]
                 dz = player.pos[2] - am.pos[2]
                 dist = math.sqrt(dx*dx + dy*dy + dz*dz)
-                if dist < AMMONITE_CORPSE_RADIUS + 30:
+                if dist < AMMONITE_CORPSE_RADIUS:
                     # Boost player forward and up
                     look = player.get_look_dir()
                     horiz = math.sqrt(look[0]**2 + look[2]**2)
@@ -1489,16 +1489,16 @@ def check_pellet_hits_ammonites(player, ammonites):
     player.pellets = alive_pellets
 
 
-def draw_ammonites(ammonites):
-    """Render ammonites as big flat spiral disc creatures."""
-    fire_t = time.time()
+def draw_ammonites(ammonites, disc_dl=None):
+    """Render ammonites as big flat spiral disc creatures using compiled geometry."""
+    fire_t = g_frame_time
+    r = AMMONITE_RADIUS
 
     for am in ammonites:
         if not am.alive and not am.is_corpse:
             continue
 
         x, y, z = am.pos
-        r = AMMONITE_RADIUS
 
         glPushMatrix()
         glTranslatef(x, y, z)
@@ -1512,75 +1512,42 @@ def draw_ammonites(ammonites):
             base_g = 0.2 + revive_frac * 0.3 * flicker
             base_b = 0.15
             alpha = 0.7 + revive_frac * 0.3
-            # Tilt flat on ground
             glRotatef(90, 1, 0, 0)
         else:
-            # Living: amber/brown shell with iridescent shimmer
             shimmer = 0.5 + 0.5 * math.sin(fire_t * 3 + am.bob_phase)
             base_r = 0.6 + shimmer * 0.2
             base_g = 0.35 + shimmer * 0.15
             base_b = 0.1 + shimmer * 0.1
             alpha = 0.9
 
-        # Draw flat disc body (thick disc made of stacked rings)
-        segments = 24
-        thickness = r * 0.25  # flat but not paper-thin
+        # Draw disc body using compiled display list
+        glColor4f(base_r * 0.9, base_g * 0.9, base_b, alpha)
+        glPushMatrix()
+        glScalef(r, r, r)
+        if disc_dl:
+            glCallList(disc_dl)
+        glPopMatrix()
 
-        # Top and bottom faces
-        for face in [1, -1]:
-            fy = face * thickness * 0.5
-            glBegin(GL_TRIANGLE_FAN)
-            glColor4f(base_r * 0.9, base_g * 0.9, base_b, alpha)
-            glVertex3f(0, fy, 0)
-            for i in range(segments + 1):
-                a = (i / segments) * math.pi * 2
-                glVertex3f(math.cos(a) * r, fy, math.sin(a) * r)
-            glEnd()
-
-        # Outer rim
-        glBegin(GL_QUAD_STRIP)
-        for i in range(segments + 1):
-            a = (i / segments) * math.pi * 2
-            cx, cz = math.cos(a) * r, math.sin(a) * r
-            bright = 0.8 + 0.2 * math.sin(a * 3 + fire_t * 2)
-            glColor4f(base_r * bright, base_g * bright, base_b * bright, alpha)
-            glVertex3f(cx, thickness * 0.5, cz)
-            glVertex3f(cx, -thickness * 0.5, cz)
-        glEnd()
-
-        # Spiral pattern on top (the ammonite signature)
+        # Spiral pattern (pre-computed trig)
+        thickness = r * 0.25
         glLineWidth(2.5)
         glBegin(GL_LINE_STRIP)
-        spiral_turns = 3.5
-        spiral_points = 60
-        for i in range(spiral_points):
-            t = i / (spiral_points - 1)
-            a = t * spiral_turns * math.pi * 2
+        for t, sc, ss in _spiral_data:
             sr = t * r * 0.85
-            sx = math.cos(a) * sr
-            sz = math.sin(a) * sr
-            # Color shifts along spiral
-            glColor4f(
-                base_r * 0.5 + t * 0.5,
-                base_g * 0.3 + t * 0.4,
-                base_b + t * 0.3,
-                alpha
-            )
-            glVertex3f(sx, thickness * 0.5 + 1.0, sz)
+            glColor4f(base_r * 0.5 + t * 0.5, base_g * 0.3 + t * 0.4, base_b + t * 0.3, alpha)
+            glVertex3f(sc * sr, thickness * 0.5 + 1.0, ss * sr)
         glEnd()
 
-        # Radial ribs across the shell
+        # Radial ribs (pre-computed trig)
         glLineWidth(1.5)
         glBegin(GL_LINES)
-        rib_count = 12
-        for i in range(rib_count):
-            a = (i / rib_count) * math.pi * 2
+        for i in range(0, _DISC_SEGS):
             glColor4f(base_r * 0.7, base_g * 0.7, base_b * 0.5, alpha * 0.6)
             glVertex3f(0, thickness * 0.5 + 0.5, 0)
-            glVertex3f(math.cos(a) * r * 0.9, thickness * 0.5 + 0.5, math.sin(a) * r * 0.9)
+            glVertex3f(_disc_cos[i] * r * 0.9, thickness * 0.5 + 0.5, _disc_sin[i] * r * 0.9)
         glEnd()
 
-        # Corpse: pulsing pickup glow
+        # Corpse glow
         if am.is_corpse:
             pulse = 0.5 + 0.5 * math.sin(fire_t * 8)
             glPointSize(12.0)
@@ -1594,65 +1561,34 @@ def draw_ammonites(ammonites):
     glLineWidth(1.0)
 
 
-def draw_skulls(skulls):
-    """Render flaming skulls with weak spots."""
+def draw_skulls(skulls, sphere_dl=None):
+    """Render flaming skulls with weak spots using compiled display list."""
+    fire_t = g_frame_time
+    r = SKULL_RADIUS
+    wr = SKULL_WEAKSPOT_RADIUS
+
     for skull in skulls:
         if not skull.alive:
-            # Still draw damage numbers for dead skulls
-            _draw_damage_numbers(skull)
             continue
 
         x, y, z = skull.pos
-        r = SKULL_RADIUS
-        fire_t = time.time()
 
-        # --- Skull body (dark sphere approximation using quads) ---
+        # --- Skull body (compiled sphere) ---
+        fire_flicker = 0.05 * math.sin(fire_t * 8 + skull.fire_phase)
+        glColor3f(0.75 + fire_flicker, 0.65 + fire_flicker, 0.5)
         glPushMatrix()
         glTranslatef(x, y, z)
-
-        # Main skull body - draw as an icosphere-ish shape with quads
-        # Skull base color
-        segments = 12
-        rings = 8
-        for i in range(rings):
-            lat0 = math.pi * (-0.5 + i / rings)
-            lat1 = math.pi * (-0.5 + (i + 1) / rings)
-            y0 = math.sin(lat0) * r
-            y1 = math.sin(lat1) * r
-            r0 = math.cos(lat0) * r
-            r1 = math.cos(lat1) * r
-
-            glBegin(GL_QUAD_STRIP)
-            for j in range(segments + 1):
-                lng = 2 * math.pi * j / segments
-                cx = math.cos(lng)
-                cz = math.sin(lng)
-
-                # Skull color: bone white with dark eye sockets
-                # Simple: darker near front-center for "eye" look
-                front_dot = cx * math.cos(skull.weakspot_angle + math.pi) + cz * math.sin(skull.weakspot_angle + math.pi)
-                height_frac = (i / rings)
-
-                if front_dot > 0.5 and 0.3 < height_frac < 0.7:
-                    # Eye socket region - dark
-                    glColor3f(0.05, 0.0, 0.0)
-                else:
-                    # Bone color with fire glow
-                    fire_flicker = 0.05 * math.sin(fire_t * 8 + skull.fire_phase + j * 0.5)
-                    glColor3f(0.75 + fire_flicker, 0.65 + fire_flicker, 0.5)
-
-                glVertex3f(cx * r0, y0, cz * r0)
-                glVertex3f(cx * r1, y1, cz * r1)
-            glEnd()
-
+        glScalef(r, r, r)
+        if sphere_dl:
+            glCallList(sphere_dl)
         glPopMatrix()
 
-        # --- Fire particles around the skull ---
+        # --- Fire particles (reduced count) ---
         glDisable(GL_DEPTH_TEST)
         glPointSize(4.0)
         glBegin(GL_POINTS)
-        for i in range(20):
-            phase = skull.fire_phase + i * 0.7
+        for i in range(10):
+            phase = skull.fire_phase + i * 1.4
             ft = fire_t * 3 + phase
             fx = x + math.sin(ft * 1.3 + i) * (r + 5)
             fy = y + r * 0.5 + (ft * 20 + i * 3) % (r * 2)
@@ -1663,51 +1599,29 @@ def draw_skulls(skulls):
         glEnd()
         glEnable(GL_DEPTH_TEST)
 
-        # --- Weak spot (glowing orb on back) ---
+        # --- Weak spot (compiled sphere, scaled) ---
         wp = skull.weakspot_pos()
-        wr = SKULL_WEAKSPOT_RADIUS
+        pulse = 0.8 + 0.2 * math.sin(fire_t * 5 + skull.fire_phase)
+        glColor4f(1.0 * pulse, 0.2 * pulse, 0.2 * pulse, 0.9)
         glPushMatrix()
         glTranslatef(wp[0], wp[1], wp[2])
-
-        # Pulsing glow
-        pulse = 0.8 + 0.2 * math.sin(fire_t * 5 + skull.fire_phase)
-        ws_segments = 8
-        ws_rings = 6
-        for i in range(ws_rings):
-            lat0 = math.pi * (-0.5 + i / ws_rings)
-            lat1 = math.pi * (-0.5 + (i + 1) / ws_rings)
-            y0 = math.sin(lat0) * wr
-            y1 = math.sin(lat1) * wr
-            r0 = math.cos(lat0) * wr
-            r1 = math.cos(lat1) * wr
-
-            glBegin(GL_QUAD_STRIP)
-            for j in range(ws_segments + 1):
-                lng = 2 * math.pi * j / ws_segments
-                cx = math.cos(lng)
-                cz = math.sin(lng)
-                glColor4f(1.0 * pulse, 0.2 * pulse, 0.2 * pulse, 0.9)
-                glVertex3f(cx * r0, y0, cz * r0)
-                glVertex3f(cx * r1, y1, cz * r1)
-            glEnd()
+        glScalef(wr, wr, wr)
+        if sphere_dl:
+            glCallList(sphere_dl)
         glPopMatrix()
 
         # --- HP bar above skull ---
         if skull.hp < skull.max_hp:
             hp_frac = max(0, skull.hp / skull.max_hp)
-            bar_w = SKULL_RADIUS * 2
-            bar_h = 3.0
-            bar_y_pos = y + SKULL_RADIUS + 15
-            # Billboard HP bar (always face camera - approximate with GL lines)
+            bar_w = r * 2
+            bar_y_pos = y + r + 15
             glDisable(GL_DEPTH_TEST)
             glLineWidth(4.0)
-            # Background
             glColor4f(0.3, 0.0, 0.0, 0.7)
             glBegin(GL_LINES)
             glVertex3f(x - bar_w/2, bar_y_pos, z)
             glVertex3f(x + bar_w/2, bar_y_pos, z)
             glEnd()
-            # HP fill
             r_col = 1.0 - hp_frac
             g_col = hp_frac
             glColor4f(r_col, g_col, 0.0, 0.9)
@@ -1716,9 +1630,6 @@ def draw_skulls(skulls):
             glVertex3f(x - bar_w/2 + bar_w * hp_frac, bar_y_pos, z)
             glEnd()
             glEnable(GL_DEPTH_TEST)
-
-        # Draw damage numbers
-        _draw_damage_numbers(skull)
 
 
 def _draw_damage_numbers(skull):
@@ -1848,7 +1759,7 @@ def _draw_holo_disc(mx, my, mz, radius, alpha):
     glPopMatrix()
 
 
-def draw_entity_holograms(skulls, spawners, ammonites, player):
+def draw_entity_holograms(skulls, spawners, ammonites, player, sphere_dl=None, disc_dl=None):
     """Draw red holographic overlays for all entities outside the player's FOV.
 
     Mirrors entities across the player's forward plane so the player can
@@ -1913,50 +1824,28 @@ def draw_entity_holograms(skulls, spawners, ammonites, player):
     glDisable(GL_DEPTH_TEST)
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-    fire_t = time.time()
 
     for etype, entity, dist, proximity in holo_entities:
         alpha = 0.15 + proximity * 0.4
         mx, my, mz = _mirror_point(entity.pos[0], entity.pos[1], entity.pos[2], player, fwd)
 
         if etype == "skull":
-            skull = entity
-            r = SKULL_RADIUS
-
-            # Skull body
+            # Red sphere using compiled display list
+            glColor4f(0.9, 0.1, 0.08, alpha)
             glPushMatrix()
             glTranslatef(mx, my, mz)
-            segments = 12
-            rings = 8
-            for i in range(rings):
-                lat0 = math.pi * (-0.5 + i / rings)
-                lat1 = math.pi * (-0.5 + (i + 1) / rings)
-                y0 = math.sin(lat0) * r
-                y1 = math.sin(lat1) * r
-                r0_lat = math.cos(lat0) * r
-                r1_lat = math.cos(lat1) * r
-                glBegin(GL_QUAD_STRIP)
-                for j in range(segments + 1):
-                    lng = 2 * math.pi * j / segments
-                    cx = math.cos(lng)
-                    cz = math.sin(lng)
-                    front_dot = cx * math.cos(skull.weakspot_angle + math.pi) + cz * math.sin(skull.weakspot_angle + math.pi)
-                    height_frac = (i / rings)
-                    if front_dot > 0.5 and 0.3 < height_frac < 0.7:
-                        glColor4f(0.4, 0.0, 0.0, alpha * 0.8)
-                    else:
-                        fire_flicker = 0.05 * math.sin(fire_t * 8 + skull.fire_phase + j * 0.5)
-                        glColor4f(0.9 + fire_flicker * 0.5, 0.1, 0.08, alpha)
-                    glVertex3f(cx * r0_lat, y0, cz * r0_lat)
-                    glVertex3f(cx * r1_lat, y1, cz * r1_lat)
-                glEnd()
+            glScalef(SKULL_RADIUS, SKULL_RADIUS, SKULL_RADIUS)
+            glCallList(sphere_dl)
             glPopMatrix()
 
-            # Fire particles
+            # Fewer fire particles (5 instead of 20)
+            r = SKULL_RADIUS
+            skull = entity
+            fire_t = g_frame_time
             glPointSize(4.0)
             glBegin(GL_POINTS)
-            for i in range(20):
-                phase = skull.fire_phase + i * 0.7
+            for i in range(5):
+                phase = skull.fire_phase + i * 2.8
                 ft = fire_t * 3 + phase
                 fx_real = skull.pos[0] + math.sin(ft * 1.3 + i) * (r + 5)
                 fy_real = skull.pos[1] + r * 0.5 + (ft * 20 + i * 3) % (r * 2)
@@ -1967,16 +1856,17 @@ def draw_entity_holograms(skulls, spawners, ammonites, player):
                 glVertex3f(fx, fy, fz)
             glEnd()
 
-            # Weak spot
-            wp = skull.weakspot_pos()
-            wmx, wmy, wmz = _mirror_point(wp[0], wp[1], wp[2], player, fwd)
-            _draw_holo_sphere(wmx, wmy, wmz, SKULL_WEAKSPOT_RADIUS, alpha * 1.2)
-
         elif etype == "spawner":
             _draw_holo_diamond(mx, my, mz, SPAWNER_RADIUS * 1.5, alpha)
 
         elif etype == "ammonite":
-            _draw_holo_disc(mx, my, mz, AMMONITE_RADIUS, alpha)
+            # Red disc using compiled display list
+            glColor4f(0.9, 0.1, 0.08, alpha)
+            glPushMatrix()
+            glTranslatef(mx, my, mz)
+            glScalef(AMMONITE_RADIUS, AMMONITE_RADIUS, AMMONITE_RADIUS)
+            glCallList(disc_dl)
+            glPopMatrix()
 
     glEnable(GL_DEPTH_TEST)
 
@@ -2306,6 +2196,75 @@ def draw_pillar_list():
     return dl
 
 
+# Pre-computed trig tables for unit sphere
+_SPHERE_SEGS = 8
+_SPHERE_RINGS = 6
+_sphere_cos_lng = [math.cos(2 * math.pi * j / _SPHERE_SEGS) for j in range(_SPHERE_SEGS + 1)]
+_sphere_sin_lng = [math.sin(2 * math.pi * j / _SPHERE_SEGS) for j in range(_SPHERE_SEGS + 1)]
+_sphere_lat_data = []
+for _i in range(_SPHERE_RINGS):
+    _lat0 = math.pi * (-0.5 + _i / _SPHERE_RINGS)
+    _lat1 = math.pi * (-0.5 + (_i + 1) / _SPHERE_RINGS)
+    _sphere_lat_data.append((math.sin(_lat0), math.sin(_lat1), math.cos(_lat0), math.cos(_lat1)))
+
+# Pre-computed trig for disc (ammonite)
+_DISC_SEGS = 12
+_disc_cos = [math.cos((i / _DISC_SEGS) * math.pi * 2) for i in range(_DISC_SEGS + 1)]
+_disc_sin = [math.sin((i / _DISC_SEGS) * math.pi * 2) for i in range(_DISC_SEGS + 1)]
+
+# Pre-computed spiral for ammonite
+_SPIRAL_POINTS = 30
+_SPIRAL_TURNS = 3.5
+_spiral_data = []
+for _i in range(_SPIRAL_POINTS):
+    _t = _i / (_SPIRAL_POINTS - 1)
+    _a = _t * _SPIRAL_TURNS * math.pi * 2
+    _spiral_data.append((_t, math.cos(_a), math.sin(_a)))
+
+
+def compile_unit_sphere():
+    """Compile a white unit sphere (radius=1) display list."""
+    dl = glGenLists(1)
+    glNewList(dl, GL_COMPILE)
+    for sy0, sy1, sr0, sr1 in _sphere_lat_data:
+        glBegin(GL_QUAD_STRIP)
+        for j in range(_SPHERE_SEGS + 1):
+            cx = _sphere_cos_lng[j]
+            cz = _sphere_sin_lng[j]
+            glVertex3f(cx * sr0, sy0, cz * sr0)
+            glVertex3f(cx * sr1, sy1, cz * sr1)
+        glEnd()
+    glEndList()
+    return dl
+
+
+def compile_unit_disc():
+    """Compile a unit disc (radius=1, thickness=0.25) display list."""
+    dl = glGenLists(1)
+    glNewList(dl, GL_COMPILE)
+    thickness = 0.25
+    # Top and bottom faces
+    for face in [1, -1]:
+        fy = face * thickness * 0.5
+        glBegin(GL_TRIANGLE_FAN)
+        glVertex3f(0, fy, 0)
+        for i in range(_DISC_SEGS + 1):
+            glVertex3f(_disc_cos[i], fy, _disc_sin[i])
+        glEnd()
+    # Rim
+    glBegin(GL_QUAD_STRIP)
+    for i in range(_DISC_SEGS + 1):
+        glVertex3f(_disc_cos[i], thickness * 0.5, _disc_sin[i])
+        glVertex3f(_disc_cos[i], -thickness * 0.5, _disc_sin[i])
+    glEnd()
+    glEndList()
+    return dl
+
+
+# Global frame time (set once per frame)
+g_frame_time = 0.0
+
+
 def draw_crosshair(screen_w, screen_h):
     """Draw a simple crosshair."""
     glMatrixMode(GL_PROJECTION)
@@ -2549,6 +2508,8 @@ def main():
     # Compile display lists
     ground_dl = draw_ground_compiled()
     pillar_dl = draw_pillar_list()
+    sphere_dl = compile_unit_sphere()
+    disc_dl = compile_unit_disc()
 
     # Player
     player = Player()
@@ -2569,7 +2530,7 @@ def main():
 
     running = True
     while running:
-        dt = clock.tick(400) / 1000.0
+        dt = clock.tick(240) / 1000.0
         dt = min(dt, 0.05)  # clamp to avoid physics explosions
         dt *= GAME_SPEED  # global time scale
         fps = clock.get_fps()
@@ -2620,6 +2581,10 @@ def main():
                 glLoadIdentity()
                 gluPerspective(90, screen_w / screen_h, 1.0, 15000.0)
                 glMatrixMode(GL_MODELVIEW)
+
+        # Cache frame time once
+        global g_frame_time
+        g_frame_time = time.time()
 
         # Input
         keys = pygame.key.get_pressed()
@@ -2709,11 +2674,11 @@ def main():
         draw_spawners(spawners)
 
         # Draw enemies
-        draw_skulls(skulls)
-        draw_ammonites(ammonites)
+        draw_skulls(skulls, sphere_dl)
+        draw_ammonites(ammonites, disc_dl)
 
         # Draw red holograms for all entities outside FOV
-        draw_entity_holograms(skulls, spawners, ammonites, player)
+        draw_entity_holograms(skulls, spawners, ammonites, player, sphere_dl, disc_dl)
 
         # Draw pellets
         draw_pellets(player)

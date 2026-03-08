@@ -641,7 +641,10 @@
     <div id="splashError" class="hidden" style="color:var(--danger);font-size:.82rem;margin-top:-4px;text-align:left"></div>
     <button id="splashConfirm" class="btn btn-primary" style="width:100%;margin-top:4px">Log In</button>
     <button id="splashOffline" class="btn hidden" style="width:100%;margin-top:8px;background:transparent;border-color:var(--border);color:var(--muted-color)">Work Offline (use last saved data)</button>
-    <div style="text-align:center;font-size:.72rem;color:#3d5066;margin-top:4px">updated Mar 8 2026</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+      <div style="font-size:.72rem;color:#3d5066">updated Mar 8 2026 13:49:48</div>
+      <button id="splashCheckUpdate" style="background:none;border:none;font-size:.72rem;color:#3d5066;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px">Check for update</button>
+    </div>
   </div>
 </div>
   <div id="syncBarWrap" aria-live="polite" aria-label="Sync in progress"><div id="syncBar"></div></div>
@@ -1995,6 +1998,18 @@
         // Allow Enter key to confirm
         [splashGistId, splashToken].forEach(inp=>{
           inp.addEventListener('keydown', e=>{ if(e.key==='Enter') splashConfirm.click(); });
+        });
+
+        // Force SW update check + reload
+        document.getElementById('splashCheckUpdate').addEventListener('click', async ()=>{
+          const btn = document.getElementById('splashCheckUpdate');
+          btn.textContent = 'Checking…';
+          btn.style.pointerEvents = 'none';
+          try {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if(reg) await reg.update();
+          } catch(e){}
+          window.location.reload();
         });
       })();
 
