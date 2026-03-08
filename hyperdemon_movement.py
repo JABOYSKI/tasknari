@@ -49,7 +49,7 @@ GROUND_MAX_SPEED = 638.0
 GROUND_FRICTION = 6.0
 AIR_ACCEL = 24.0
 AIR_MAX_SPEED = 80.0  # wishdir clamp for air strafing
-JUMP_VELOCITY = 599.0
+JUMP_VELOCITY = 401.0
 DASH_IMPULSE = 11372.0       # initial burst — the "fast" stage
 DASH_DRAG = 4.0             # lower drag = longer tail-end glide
 FAST_DASH_IMPULSE = 14164.0
@@ -91,7 +91,7 @@ SKULL_MAX = 30  # cap on total skulls
 SPAWNER_COUNT = 4  # initial spawners
 SPAWNER_HP = 800
 SPAWNER_REGEN = 80.0  # HP regenerated per second
-SPAWNER_RADIUS = 364.0  # collision radius (5x original)
+SPAWNER_RADIUS = 244.0  # collision radius
 SPAWNER_SPAWN_INTERVAL = 15.0  # seconds between skull spawns
 SPAWNER_SPAWN_RANGE = 1500.0  # how far from player spawners appear
 SPAWNER_MIN_DIST = 400.0  # minimum spawn distance from player
