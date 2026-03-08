@@ -3,12 +3,6 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <link rel="manifest" href="manifest.json"/>
-  <meta name="theme-color" content="#232F3E"/>
-  <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="apple-mobile-web-app-title" content="Tasknari"/>
-  <link rel="apple-touch-icon" href="icon-192.png"/>
   <title>Tasknari</title>
   <style>
     /* === Amazon-inspired dark palette === */
@@ -625,7 +619,7 @@
 <div id="splash">
   <div id="splashCard">
     <div id="splashLogo">&#9881;</div>
-    <h1 id="splashTitle">Tasknari</h1>
+    <h1 id="splashTitle">Todo Applet</h1>
     <p id="splashSub">Confirm your credentials to pull the latest data.</p>
     <div class="splashField">
       <label class="splashLabel" for="splashGistId">Gist ID</label>
@@ -635,10 +629,6 @@
       <label class="splashLabel" for="splashToken">GitHub Token</label>
       <input id="splashToken" class="field" type="password" placeholder="ghp_..." autocomplete="off"/>
     </div>
-    <label style="display:flex;align-items:center;gap:8px;font-size:.83rem;color:var(--muted-color);cursor:pointer;user-select:none">
-      <input type="checkbox" id="splashRemember" style="width:15px;height:15px;accent-color:var(--orange);cursor:pointer"/>
-      Remember Gist ID &amp; token
-    </label>
     <div id="splashError" class="hidden" style="color:var(--danger);font-size:.82rem;margin-top:-4px;text-align:left"></div>
     <button id="splashConfirm" class="btn btn-primary" style="width:100%;margin-top:4px">Pull &amp; Open</button>
     <button id="splashOffline" class="btn hidden" style="width:100%;margin-top:8px;background:transparent;border-color:var(--border);color:var(--muted-color)">Work Offline (use last saved data)</button>
@@ -1890,7 +1880,6 @@
         const splash = document.getElementById('splash');
         const splashGistId = document.getElementById('splashGistId');
         const splashToken = document.getElementById('splashToken');
-        const splashRemember = document.getElementById('splashRemember');
         const splashError = document.getElementById('splashError');
         const splashConfirm = document.getElementById('splashConfirm');
         const splashOffline = document.getElementById('splashOffline');
@@ -1900,12 +1889,11 @@
           setTimeout(()=>{ splash.style.display='none'; }, 260);
         }
 
-        // Pre-fill remembered values
+        // Always show splash — pre-fill remembered values
         let saved = {};
         try{ saved = JSON.parse(localStorage.getItem(GIST_SETTINGS_KEY)||'{}'); }catch{}
         if(saved.id) splashGistId.value = saved.id;
         if(saved.remember && saved.token) splashToken.value = saved.token;
-        splashRemember.checked = !!saved.remember;
         // Show offline option only if there is already data saved locally
         if(saved.id) splashOffline.classList.remove('hidden');
         // Focus the empty field (or token if id already filled)
@@ -1914,7 +1902,6 @@
         splashConfirm.addEventListener('click', async ()=>{
           const gid = splashGistId.value.trim();
           const tok = splashToken.value.trim();
-          const remember = splashRemember.checked;
           if(!gid){
             splashError.textContent = 'Gist ID is required.';
             splashError.classList.remove('hidden');
@@ -1931,11 +1918,11 @@
 
           try {
             await pullFromGist();
-            // Save credentials based on remember checkbox
-            const obj = { id:gid, remember, auto:el.gist.auto.checked };
-            if(remember && tok) obj.token = tok;
+            // Save only after a successful pull
+            const obj = { id:gid, remember:!!tok, auto:el.gist.auto.checked };
+            if(tok) obj.token = tok;
             localStorage.setItem(GIST_SETTINGS_KEY, JSON.stringify(obj));
-            el.gist.remember.checked = remember;
+            el.gist.remember.checked = !!tok;
             dismissSplash();
           } catch(err) {
             splashError.textContent = err.message || 'Pull failed — check your Gist ID and token.';
@@ -2257,16 +2244,6 @@
       renderIds();
       render();
     })();
-  </script>
-
-  <script>
-    if('serviceWorker' in navigator){
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/tasknari/sw.js')
-          .then(r => console.log('SW registered:', r.scope))
-          .catch(e => console.log('SW failed:', e));
-      });
-    }
   </script>
 </body>
 </html>
