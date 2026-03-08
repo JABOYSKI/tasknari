@@ -2262,9 +2262,20 @@
   <script>
     if('serviceWorker' in navigator){
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/tasknari/sw.js')
-          .then(r => console.log('SW registered:', r.scope))
-          .catch(e => console.log('SW failed:', e));
+        navigator.serviceWorker.register('/tasknari/sw.js').then(reg => {
+          // When a new SW is found, wait for it to activate then auto-reload
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              if(newWorker.state === 'activated') window.location.reload();
+            });
+          });
+        }).catch(e => console.log('SW failed:', e));
+
+        // Catch SW taking control mid-session
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
       });
     }
   </script>
