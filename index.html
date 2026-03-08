@@ -2325,13 +2325,16 @@
   <script>
     if('serviceWorker' in navigator){
       let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if(refreshing) return;
-        refreshing = true;
-        window.location.reload();
+      // SW explicitly messages the page after it activates and has new content ready
+      navigator.serviceWorker.addEventListener('message', e => {
+        if(e.data && e.data.type === 'SW_UPDATED' && !refreshing){
+          refreshing = true;
+          window.location.reload();
+        }
       });
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/tasknari/sw.js')
+        navigator.serviceWorker.register('/tasknari/sw.js', { updateViaCache: 'none' })
+          .then(reg => reg.update())
           .catch(e => console.log('SW failed:', e));
       });
     }

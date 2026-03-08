@@ -459,20 +459,20 @@ def update_player(player, keys, dt):
                 if player.dash_type == "normal":
                     player.dash_type = "fast"
                     player.dash_duration = FAST_DASH_DURATION
-                    # Boost speed for fast dash
+                    # Boost speed for fast dash (all 3 axes)
                     speed_ratio = FAST_DASH_IMPULSE / DASH_IMPULSE
                     player.vel[0] *= speed_ratio
+                    player.vel[1] *= speed_ratio
                     player.vel[2] *= speed_ratio
-                    player.vel[1] = -200.0  # pull down for grounding
             elif player.space_held and player.dash_type == "normal":
                 # Holding space -> slide dash
                 player.dash_type = "slide"
                 player.dash_duration = SLIDE_DASH_DURATION
-                # Slow down for slide dash
+                # Slow down for slide dash (all 3 axes)
                 speed_ratio = SLIDE_DASH_IMPULSE / DASH_IMPULSE
                 player.vel[0] *= speed_ratio
+                player.vel[1] *= speed_ratio
                 player.vel[2] *= speed_ratio
-                player.vel[1] = -100.0  # pull toward ground
 
         # 2-stage dash: aggressive drag bleeds the initial burst into a slower glide
         drag = math.exp(-DASH_DRAG * dt)
@@ -493,19 +493,21 @@ def update_player(player, keys, dt):
 
         # Check if dash is over
         if player.dash_timer >= player.dash_duration:
-            if player.dash_type == "fast":
-                # Fast dash grounds you quickly
-                player.vel[1] = -300.0
-                player.state = STATE_AIRBORNE
-            elif player.dash_type == "slide" and player.space_held:
-                # Transition to ground slide
-                player.state = STATE_SLIDING
-                player.slide_timer = 0.0
-                player.current_height = PLAYER_CROUCH_HEIGHT
+            if player.pos[1] <= player.current_height + 5.0:
+                # Near ground — transition to slide or land
+                if player.space_held:
+                    player.pos[1] = player.current_height
+                    player.vel[1] = 0.0
+                    player.state = STATE_SLIDING
+                    player.slide_timer = 0.0
+                    player.current_height = PLAYER_CROUCH_HEIGHT
+                else:
+                    _land(player)
             else:
+                # Still in the air — just go airborne with current momentum
                 player.state = STATE_AIRBORNE
 
-        # Landing during dash -> slide if holding space
+        # Landing during dash
         if player.state == STATE_DASHING and player.pos[1] <= player.current_height:
             if player.space_held:
                 player.pos[1] = player.current_height
@@ -2567,7 +2569,7 @@ def main():
 
     running = True
     while running:
-        dt = clock.tick(144) / 1000.0
+        dt = clock.tick(400) / 1000.0
         dt = min(dt, 0.05)  # clamp to avoid physics explosions
         dt *= GAME_SPEED  # global time scale
         fps = clock.get_fps()
