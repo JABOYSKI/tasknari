@@ -42,18 +42,18 @@ except ImportError:
 # =============================================================================
 # Physics Constants (Quake-like, tuned for Hyperdemon feel)
 # =============================================================================
-GRAVITY = 1118.0
-GROUND_ACCEL = 20.0
-GROUND_MAX_SPEED = 638.0
+GRAVITY = 1957.0
+GROUND_ACCEL = 35.0
+GROUND_MAX_SPEED = 1117.0
 GROUND_FRICTION = 6.0
-AIR_ACCEL = 24.0
-AIR_MAX_SPEED = 80.0  # wishdir clamp for air strafing
-JUMP_VELOCITY = 599.0
-DASH_IMPULSE = 11372.0       # initial burst — the "fast" stage
+AIR_ACCEL = 42.0
+AIR_MAX_SPEED = 140.0  # wishdir clamp for air strafing
+JUMP_VELOCITY = 1048.0
+DASH_IMPULSE = 19901.0       # initial burst — the "fast" stage
 DASH_DRAG = 4.0             # lower drag = longer tail-end glide
-FAST_DASH_IMPULSE = 14164.0
-SLIDE_DASH_IMPULSE = 6584.0
-STOMP_VELOCITY = -2394.0
+FAST_DASH_IMPULSE = 24787.0
+SLIDE_DASH_IMPULSE = 11522.0
+STOMP_VELOCITY = -4190.0
 SLIDE_FRICTION = 1.5
 SLIDE_MIN_SPEED = 50.0
 BUNNY_HOP_BONUS = 1.05  # fallback speed multiplier (non-slide jumps)
@@ -76,7 +76,7 @@ DASH_DOUBLETAP_MAX = 0.5   # maximum gap — too slow = no dash
 
 # Enemies
 SKULL_COUNT = 8
-SKULL_SPEED = 649.0
+SKULL_SPEED = 1136.0
 SKULL_RADIUS = 20.0  # collision/body radius
 SKULL_WEAKSPOT_RADIUS = 8.0  # weak spot sized to match shotgun spread
 SKULL_HP = 40
@@ -104,16 +104,16 @@ SKULL_WARN_RADIUS = 500.0  # red hologram overlay starts at this distance
 AMMONITE_COUNT = 3  # initial count
 AMMONITE_HP = 120
 AMMONITE_RADIUS = 60.0  # collision radius
-AMMONITE_SPEED = 400.0
-AMMONITE_ACCEL = 500.0
+AMMONITE_SPEED = 700.0
+AMMONITE_ACCEL = 875.0
 AMMONITE_DRAG = 2.5
 AMMONITE_AGGRO_RANGE = 600.0  # only chases when player is this close
 AMMONITE_HOVER_HEIGHT = 80.0
 AMMONITE_PELLET_DAMAGE = 10
 AMMONITE_CORPSE_RADIUS = 50.0  # touch radius for corpse pickup
 AMMONITE_CORPSE_REVIVE = 3.0  # seconds before corpse revives
-AMMONITE_BOOST_FORWARD = 7200.0  # forward boost on corpse pickup (mega dash)
-AMMONITE_BOOST_UP = 7200.0  # upward boost - equal to forward for 45° launch
+AMMONITE_BOOST_FORWARD = 12600.0  # forward boost on corpse pickup (mega dash)
+AMMONITE_BOOST_UP = 12600.0  # upward boost - equal to forward for 45° launch
 AMMONITE_SPAWN_RANGE = 1800.0
 AMMONITE_MIN_DIST = 500.0
 AMMONITE_MAX = 6
@@ -126,9 +126,9 @@ PLAYER_MAX_HP = 100
 SHOTGUN_COOLDOWN = 0.75
 SHOTGUN_PELLET_COUNT = 59
 SHOTGUN_SPREAD = 7.5  # degrees
-SHOTGUN_PELLET_SPEED = 1995.0
+SHOTGUN_PELLET_SPEED = 3491.0
 SHOTGUN_PELLET_LIFETIME = 1.2  # seconds
-SHOTGUN_KNOCKBACK = 831.0  # thrust applied to player opposite to firing direction
+SHOTGUN_KNOCKBACK = 1454.0  # thrust applied to player opposite to firing direction
 
 # Diagonal speed factor (sqrt(2)/2 normalized but slightly boosted)
 DIAGONAL_BONUS = 1.05
@@ -749,7 +749,7 @@ def draw_pellets(player):
 # Enemies - Flaming Skulls
 # =============================================================================
 
-SKULL_ACCEL = 831.0  # how fast skulls accelerate toward player
+SKULL_ACCEL = 1454.0  # how fast skulls accelerate toward player
 SKULL_DRAG = 2.0  # air drag on skull velocity
 SKULL_TARGET_HEIGHT = PLAYER_HEIGHT * 0.9  # preferred hover height
 SKULL_HEIGHT_ACCEL = 300.0  # vertical correction force
@@ -1323,7 +1323,9 @@ def update_ammonites(ammonites, player, dt):
                     player.vel[0] = fwd_x * AMMONITE_BOOST_FORWARD
                     player.vel[2] = fwd_z * AMMONITE_BOOST_FORWARD
                     player.vel[1] = AMMONITE_BOOST_UP
+                    player.pos[1] = player.current_height + 5.0  # lift off ground to prevent floor clamp
                     player.state = STATE_AIRBORNE
+                    player.has_dashed = False
                     am.is_corpse = False
                     am.alive = False
                     continue

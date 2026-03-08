@@ -1,4 +1,4 @@
-const CACHE = 'tasknari-v1';
+const CACHE = 'tasknari-~0,12';
 const ASSETS = [
   '/tasknari/',
   '/tasknari/index.html',
