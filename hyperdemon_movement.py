@@ -118,15 +118,15 @@ AMMONITE_BOOST_UP = 900.0  # upward boost - equal to forward for 45° launch
 AMMONITE_SPAWN_RANGE = 1800.0
 AMMONITE_MIN_DIST = 500.0
 AMMONITE_MAX = 6
-AMMONITE_KILL_RADIUS = 35.0  # touches player = death
+AMMONITE_KILL_RADIUS = AMMONITE_RADIUS  # touches player = death
 
 # Player
 PLAYER_MAX_HP = 100
 
 # Shotgun
 SHOTGUN_COOLDOWN = 0.75
-SHOTGUN_PELLET_COUNT = 59
-SHOTGUN_SPREAD = 7.5  # degrees
+SHOTGUN_PELLET_COUNT = 118
+SHOTGUN_SPREAD = 15.0  # degrees
 SHOTGUN_PELLET_SPEED = 1995.0
 SHOTGUN_PELLET_LIFETIME = 1.2  # seconds
 SHOTGUN_KNOCKBACK = 831.0  # thrust applied to player opposite to firing direction
@@ -992,6 +992,17 @@ def update_spawners(spawners, skulls, player, dt):
                 sp.spawn_queue -= 1
                 sp.spawn_tick = 0.08  # 80ms between each skull
 
+        # Kill player on touch
+        if player.alive:
+            dx = player.pos[0] - sp.pos[0]
+            dy = player.pos[1] - sp.pos[1]
+            dz = player.pos[2] - sp.pos[2]
+            dist = math.sqrt(dx*dx + dy*dy + dz*dz)
+            if dist < SPAWNER_RADIUS:
+                player.hp = 0
+                player.alive = False
+                player.death_timer = 2.0
+
     return alive_spawners
 
 
@@ -1404,12 +1415,15 @@ def update_ammonites(ammonites, player, dt, pickup_sounds=None):
         dz = player.pos[2] - am.pos[2]
         dist = math.sqrt(dx*dx + dy*dy + dz*dz)
 
-        # Chase when close, otherwise lazy orbit around group center
+        # Chase when close — aggressively pursue the player
         if dist < AMMONITE_AGGRO_RANGE and dist > 1.0:
             nx, ny, nz = dx / dist, dy / dist, dz / dist
-            am.vel[0] += nx * AMMONITE_ACCEL * dt
-            am.vel[1] += ny * AMMONITE_ACCEL * dt
-            am.vel[2] += nz * AMMONITE_ACCEL * dt
+            # Stronger acceleration when closer (ramp up urgency)
+            close_factor = 1.0 + (1.0 - dist / AMMONITE_AGGRO_RANGE) * 2.0
+            accel = AMMONITE_ACCEL * close_factor
+            am.vel[0] += nx * accel * dt
+            am.vel[1] += ny * accel * dt
+            am.vel[2] += nz * accel * dt
         else:
             # Lazy orbit around group center
             am.orbit_phase += am.orbit_speed * dt
