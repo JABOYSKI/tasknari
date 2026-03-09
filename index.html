@@ -506,6 +506,7 @@
       height:100%;border:none;padding:0;cursor:pointer;border-radius:0;
       transition:width .45s cubic-bezier(0.2,0,0,1), opacity .2s, filter .15s;
       min-width:0;display:flex;align-items:center;overflow:hidden;white-space:nowrap;
+      position:relative;justify-content:flex-end;
     }
     .prio-seg:first-child{border-radius:6px 0 0 6px}
     .prio-seg:last-child {border-radius:0 6px 6px 0}
@@ -516,7 +517,8 @@
     .prio-seg:hover{filter:brightness(1.25);opacity:1}
     .prio-seg:active{filter:brightness(0.85)}
     .seg-label{
-      flex:1;text-align:center;font-size:10px;font-weight:700;color:rgba(0,0,0,.7);
+      position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      font-size:10px;font-weight:700;color:rgba(0,0,0,.7);
       overflow:hidden;white-space:nowrap;z-index:1;pointer-events:none;
     }
     #seg-low .seg-label{color:rgba(255,255,255,.6)}
@@ -664,7 +666,7 @@
     <button id="splashConfirm" class="btn btn-primary" style="width:100%;margin-top:4px">Log In</button>
     <button id="splashOffline" class="btn hidden" style="width:100%;margin-top:8px;background:transparent;border-color:var(--border);color:var(--muted-color)">Work Offline (use last saved data)</button>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
-      <div style="font-size:.72rem;color:#3d5066">updated Mar 8 2026 20:23:24</div>
+      <div style="font-size:.72rem;color:#3d5066">updated Mar 8 2026 20:29:39</div>
       <button id="splashCheckUpdate" style="background:none;border:none;font-size:.72rem;color:#3d5066;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px">Check for update</button>
     </div>
   </div>
