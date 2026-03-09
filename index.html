@@ -9,6 +9,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="Tasknari"/>
   <link rel="apple-touch-icon" href="icon-192.png"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
   <title>Tasknari</title>
   <style>
     /* === Amazon-inspired dark palette === */
@@ -641,7 +643,7 @@
     <button id="splashConfirm" class="btn btn-primary" style="width:100%;margin-top:4px">Log In</button>
     <button id="splashOffline" class="btn hidden" style="width:100%;margin-top:8px;background:transparent;border-color:var(--border);color:var(--muted-color)">Work Offline (use last saved data)</button>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
-      <div style="font-size:.72rem;color:#3d5066">updated Mar 8 2026 19:09:10</div>
+      <div style="font-size:.72rem;color:#3d5066">updated Mar 8 2026 19:16:39</div>
       <button id="splashCheckUpdate" style="background:none;border:none;font-size:.72rem;color:#3d5066;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px">Check for update</button>
     </div>
   </div>
@@ -1140,7 +1142,9 @@
       });
       el.questClear.addEventListener('click', ()=>{
         if(!questIds.size) return;
-        questIds.clear(); saveQuest(); render();
+        questIds.clear(); saveQuest();
+        document.querySelectorAll('input[data-action="quest"]').forEach(cb=>cb.checked=false);
+        updateQuestBtn();
         showToast('Quest list cleared.');
       });
 
