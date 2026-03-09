@@ -1215,6 +1215,45 @@ def draw_spawners(spawners, sphere_dl=None):
             glEnd()
             glEnable(GL_DEPTH_TEST)
 
+        # Spawn preview hologram — show faint blue skull when spawn is < 6 seconds away
+        if sp.spawn_timer < 6.0 and sp.spawn_queue == 0 and sphere_dl:
+            preview_frac = 1.0 - (sp.spawn_timer / 6.0)  # 0 at 6s, 1 at 0s
+            # Flash faster as spawn approaches
+            flash_speed = 2.0 + preview_frac * 15.0
+            flash = 0.5 + 0.5 * math.sin(fire_t * flash_speed)
+            # Visibility increases as timer decreases
+            alpha = preview_frac * 0.4 * flash
+
+            if alpha > 0.02:
+                glDisable(GL_DEPTH_TEST)
+                glEnable(GL_BLEND)
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+                # Draw a wispy blue skull above the spawner
+                preview_y = y + size + 30 + math.sin(fire_t * 2) * 10
+                glColor4f(0.3, 0.5, 1.0, alpha)
+                glPushMatrix()
+                glTranslatef(x, preview_y, z)
+                skull_preview_r = SKULL_RADIUS * (0.8 + preview_frac * 0.4)
+                glScalef(skull_preview_r, skull_preview_r, skull_preview_r)
+                glCallList(sphere_dl)
+                glPopMatrix()
+
+                # Wispy particles around the preview
+                glPointSize(3.0)
+                glBegin(GL_POINTS)
+                for i in range(6):
+                    pa = fire_t * 3 + i * (math.pi * 2 / 6)
+                    pr = skull_preview_r * 1.5
+                    px = x + math.cos(pa) * pr
+                    py2 = preview_y + math.sin(pa * 1.3 + i) * skull_preview_r
+                    pz = z + math.sin(pa) * pr
+                    glColor4f(0.4, 0.6, 1.0, alpha * 0.7)
+                    glVertex3f(px, py2, pz)
+                glEnd()
+
+                glEnable(GL_DEPTH_TEST)
+
 
 def check_pellet_hits(player, skulls):
     """Check pellet collisions with skulls. Returns list of pellets that are still alive."""
@@ -2692,7 +2731,7 @@ def main():
         glCallList(pillar_dl)
 
         # Draw spawners
-        draw_spawners(spawners)
+        draw_spawners(spawners, sphere_dl)
 
         # Draw enemies
         draw_skulls(skulls, sphere_dl)
