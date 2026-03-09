@@ -180,6 +180,7 @@ class Player:
 
         # Dash cooldown
         self.dash_cooldown_timer = 0.0
+        self.dash_triggered = False  # true on frame dash starts
 
         # Space held tracking
         self.space_held = False
@@ -316,6 +317,7 @@ def update_player(player, keys, dt):
     player.last_wish_dir = [wish_dir[0], wish_dir[2]]
     player.bhop_hit = False
     player.just_landed = False
+    player.dash_triggered = False
     if player.bhop_feedback_timer > 0:
         player.bhop_feedback_timer -= dt
 
@@ -438,6 +440,7 @@ def update_player(player, keys, dt):
                 player.dash_timer = 0.0
                 player.has_dashed = True
                 player.dash_cooldown_timer = DASH_COOLDOWN
+                player.dash_triggered = True
             elif not has_wish:
                 # Stomp: space with no direction
                 player.stomp_start_height = player.pos[1]
@@ -1007,12 +1010,11 @@ def update_spawners(spawners, skulls, player, dt, crystal_shatter_sound=None):
                 sp.spawn_queue -= 1
                 sp.spawn_tick = 0.08  # 80ms between each skull
 
-        # Check if player touches the blue spawn preview above spawner
-        if player.alive and sp.spawn_timer < 6.0 and sp.spawn_queue == 0:
+        # Check if player touches the blue orb above spawner
+        if player.alive:
             size = SPAWNER_RADIUS * 1.5
             preview_y = sp.pos[1] + size + 80
-            preview_frac = 1.0 - (sp.spawn_timer / 6.0)
-            preview_r = SKULL_RADIUS * (2.0 + preview_frac * 2.0) + 30.0  # generous hitbox
+            preview_r = SKULL_RADIUS * 5.0  # large forgiving hitbox
             dx = player.pos[0] - sp.pos[0]
             dy = player.pos[1] - preview_y
             dz = player.pos[2] - sp.pos[2]
@@ -1310,23 +1312,26 @@ def draw_spawners(spawners, sphere_dl=None):
             glEnd()
             glEnable(GL_DEPTH_TEST)
 
-        # Spawn preview hologram — show blue skull above spawner when spawn is < 6 seconds away
-        if sp.spawn_timer < 6.0 and sp.spawn_queue == 0 and sphere_dl:
-            preview_frac = 1.0 - (sp.spawn_timer / 6.0)  # 0 at 6s, 1 at 0s
-            # Flash faster as spawn approaches
-            flash_speed = 2.0 + preview_frac * 20.0
-            flash = 0.5 + 0.5 * math.sin(fire_t * flash_speed)
-            # Visibility: starts faint, gets bright + flashy
-            base_alpha = 0.15 + preview_frac * 0.6
-            alpha = base_alpha * (0.5 + 0.5 * flash)
+        # Blue orb above spawner — always visible, intensifies near spawn
+        if sphere_dl:
+            if sp.spawn_timer < 6.0 and sp.spawn_queue == 0:
+                preview_frac = 1.0 - (sp.spawn_timer / 6.0)  # 0 at 6s, 1 at 0s
+                flash_speed = 2.0 + preview_frac * 20.0
+                flash_val = 0.5 + 0.5 * math.sin(fire_t * flash_speed)
+                base_alpha = 0.2 + preview_frac * 0.55
+                alpha = base_alpha * (0.5 + 0.5 * flash_val)
+            else:
+                preview_frac = 0.0
+                # Gentle idle pulse
+                alpha = 0.12 + 0.06 * math.sin(fire_t * 1.5)
 
             glDisable(GL_DEPTH_TEST)
             glEnable(GL_BLEND)
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-            # Draw large blue skull preview above the spawner
+            # Draw blue orb above the spawner
             preview_y = y + size + 80 + math.sin(fire_t * 2) * 20
-            skull_preview_r = SKULL_RADIUS * (2.0 + preview_frac * 2.0)
+            skull_preview_r = SKULL_RADIUS * (2.5 + preview_frac * 2.0)
             glColor4f(0.3, 0.5, 1.0, alpha)
             glPushMatrix()
             glTranslatef(x, preview_y, z)
@@ -1334,7 +1339,7 @@ def draw_spawners(spawners, sphere_dl=None):
             glCallList(sphere_dl)
             glPopMatrix()
 
-            # Wispy particles orbiting the preview
+            # Wispy particles orbiting the orb
             glPointSize(5.0)
             glBegin(GL_POINTS)
             for i in range(8):
@@ -2688,6 +2693,35 @@ def generate_ammonite_pickup_sounds(count=8):
     return sounds
 
 
+def generate_dash_sound():
+    """Generate a satisfying, subtle ASMR jetstream whoosh for dashing."""
+    sample_rate = 44100
+    duration = 0.35
+    n_samples = int(sample_rate * duration)
+    samples = array.array("h")
+    for i in range(n_samples):
+        t = i / sample_rate
+        # Envelope: quick attack, smooth fade
+        env = math.sin(min(t * 20, math.pi / 2)) * math.exp(-t * 5)
+        # Layered filtered noise for airy jetstream
+        noise = random.uniform(-1, 1)
+        # Soft high-frequency hiss (air rushing)
+        hiss = noise * 0.4 * math.exp(-t * 8)
+        # Gentle tonal whoosh that sweeps down in pitch
+        sweep_freq = 800 - t * 1200  # pitch drops over time
+        whoosh = math.sin(2 * math.pi * max(sweep_freq, 100) * t) * 0.2
+        # Subtle sub-bass thump for weight
+        sub = math.sin(2 * math.pi * 60 * t) * math.exp(-t * 12) * 0.15
+        # Airy shimmer
+        shimmer = math.sin(2 * math.pi * 1800 * t) * math.exp(-t * 15) * 0.08
+        sample = int(env * (hiss + whoosh + sub + shimmer) * 10000)
+        sample = max(-32768, min(32767, sample))
+        samples.append(sample)
+    sound = pygame.mixer.Sound(buffer=samples)
+    sound.set_volume(0.3)
+    return sound
+
+
 def generate_crystal_shatter_sound():
     """Generate a brief crystal/glass shatter sound for spawner preview destruction."""
     sample_rate = 44100
@@ -2723,6 +2757,7 @@ def main():
     shotgun_sound = generate_shotgun_sound()
     ammonite_pickup_sounds = generate_ammonite_pickup_sounds()
     crystal_shatter_sound = generate_crystal_shatter_sound()
+    dash_sound = generate_dash_sound()
 
     screen_w, screen_h = 1280, 720
     screen = pygame.display.set_mode((screen_w, screen_h), DOUBLEBUF | OPENGL | RESIZABLE)
@@ -2885,6 +2920,8 @@ def main():
             land_sound.play()
         if player.bhop_hit:
             bhop_sound.play()
+        if player.dash_triggered:
+            dash_sound.play()
 
         # Camera
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
