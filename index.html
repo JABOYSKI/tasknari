@@ -463,8 +463,8 @@
       /* Header controls: tighter wrap */
       header .row > div[style] { flex-wrap: wrap; justify-content: flex-end; gap: 3px; }
 
-      /* Priority bar legend: tighter on narrow */
-      #prioBarLegend { font-size: 10px; gap: 5px 10px; }
+      /* Priority bar legend: hidden (integrated into bar) */
+      #prioBarLegend { display: none; }
 
       /* Smaller tab buttons */
       .tab-btn { padding: 8px 12px; font-size: 11px; }
@@ -491,25 +491,24 @@
 
     /* ===================== PRIORITY BAR ===================== */
     #prioBarTrack{
-      display:flex;height:10px;border-radius:6px;overflow:hidden;
+      display:flex;height:24px;border-radius:6px;overflow:hidden;
       background:var(--border);gap:2px;
     }
     .prio-seg{
       height:100%;border:none;padding:0;cursor:pointer;border-radius:0;
       transition:width .45s cubic-bezier(0.2,0,0,1), opacity .2s, filter .15s;
-      min-width:0;
+      min-width:0;display:flex;align-items:center;justify-content:center;
+      font-size:10px;font-weight:700;color:rgba(0,0,0,.7);overflow:hidden;white-space:nowrap;
     }
     .prio-seg:first-child{border-radius:6px 0 0 6px}
     .prio-seg:last-child {border-radius:0 6px 6px 0}
     .prio-seg:only-child {border-radius:6px}
     #seg-high  {background:var(--orange)}
     #seg-medium{background:var(--teal)}
-    #seg-low   {background:#4A6080}
+    #seg-low   {background:#4A6080;color:rgba(255,255,255,.6)}
     .prio-seg:hover{filter:brightness(1.25);opacity:1}
     .prio-seg:active{filter:brightness(0.85)}
-    #prioBarLegend{
-      display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:7px;font-size:11px;color:var(--muted-color);
-    }
+    #prioBarLegend{display:none}
     .prio-legend-item{display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none}
     .prio-legend-item:hover{color:var(--text)}
     .prio-legend-item .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
@@ -642,7 +641,7 @@
     <button id="splashConfirm" class="btn btn-primary" style="width:100%;margin-top:4px">Log In</button>
     <button id="splashOffline" class="btn hidden" style="width:100%;margin-top:8px;background:transparent;border-color:var(--border);color:var(--muted-color)">Work Offline (use last saved data)</button>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
-      <div style="font-size:.72rem;color:#3d5066">updated Mar 8 2026 18:51:30</div>
+      <div style="font-size:.72rem;color:#3d5066">updated Mar 8 2026 19:09:10</div>
       <button id="splashCheckUpdate" style="background:none;border:none;font-size:.72rem;color:#3d5066;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px">Check for update</button>
     </div>
   </div>
@@ -918,24 +917,47 @@
         updateUndoRedoBtns();
       }
       function applySnapshot(json){
+        // Build map of old state for diffing
+        const oldTaskMap=new Map(tasks.map(t=>[t.id,JSON.stringify(t)]));
+        const oldDoneMap=new Map(done.map(t=>[t.id,JSON.stringify(t)]));
         const s=JSON.parse(json);
         tasks=Array.isArray(s.tasks)?s.tasks:[];
         done=Array.isArray(s.done)?s.done:[];
         save(STORAGE_KEYS.tasks,tasks);
         save(STORAGE_KEYS.done,done);
-        render();
+        // Find changed IDs (added, removed, or modified)
+        const changed=new Set();
+        tasks.forEach(t=>{ if(!oldTaskMap.has(t.id)||oldTaskMap.get(t.id)!==JSON.stringify(t)) changed.add(t.id); });
+        oldTaskMap.forEach((_,id)=>{ if(!tasks.some(t=>t.id===id)) changed.add(id); });
+        done.forEach(t=>{ if(!oldDoneMap.has(t.id)||oldDoneMap.get(t.id)!==JSON.stringify(t)) changed.add(t.id); });
+        oldDoneMap.forEach((_,id)=>{ if(!done.some(t=>t.id===id)) changed.add(id); });
+        renderWithFlip(null);
+        // Highlight changed cards with orange glow
+        requestAnimationFrame(()=>{
+          changed.forEach(id=>{
+            const li=document.querySelector(`li[data-id="${id}"]`);
+            if(li){
+              li.style.transition='box-shadow 0.15s ease';
+              li.style.boxShadow='0 0 0 2px rgba(255,153,0,.8), 0 0 16px rgba(255,153,0,.35)';
+              setTimeout(()=>{
+                li.style.transition='box-shadow 0.6s ease';
+                li.style.boxShadow='';
+              }, 800);
+            }
+          });
+        });
       }
       function doUndo(){
         if(!undoStack.length) return;
         redoStack.push(snapshotState());
-        applySnapshot(undoStack.pop());
+        applySnapshot(undoStack.pop(), 'Undone');
         updateUndoRedoBtns();
         showToast('Undone');
       }
       function doRedo(){
         if(!redoStack.length) return;
         undoStack.push(snapshotState());
-        applySnapshot(redoStack.pop());
+        applySnapshot(redoStack.pop(), 'Redone');
         updateUndoRedoBtns();
         showToast('Redone');
       }
@@ -1145,10 +1167,15 @@
           document.getElementById('seg-medium').style.width = pcts.medium + '%';
           document.getElementById('seg-low').style.width    = pcts.low    + '%';
           // Hide zero-count segments so gap doesn't show
-          document.getElementById('seg-high').style.display   = groups.high.length   ? '' : 'none';
-          document.getElementById('seg-medium').style.display = groups.medium.length ? '' : 'none';
-          document.getElementById('seg-low').style.display    = groups.low.length    ? '' : 'none';
-          // Update legend labels
+          const segH=document.getElementById('seg-high'), segM=document.getElementById('seg-medium'), segL=document.getElementById('seg-low');
+          segH.style.display   = groups.high.length   ? '' : 'none';
+          segM.style.display = groups.medium.length ? '' : 'none';
+          segL.style.display    = groups.low.length    ? '' : 'none';
+          // Labels inside bar segments
+          segH.textContent = groups.high.length ? `High ${groups.high.length}` : '';
+          segM.textContent = groups.medium.length ? `Med ${groups.medium.length}` : '';
+          segL.textContent = groups.low.length ? `Low ${groups.low.length}` : '';
+          // Update hidden legend labels (kept for revert)
           document.getElementById('lbl-high').textContent   = `High (${groups.high.length})`;
           document.getElementById('lbl-medium').textContent = `Medium (${groups.medium.length})`;
           document.getElementById('lbl-low').textContent    = `Low (${groups.low.length})`;
@@ -2032,6 +2059,7 @@
 
         function dismissSplash(){
           document.body.style.opacity='1';
+          document.body.style.overflow='';
           splash.classList.add('hidden');
           setTimeout(()=>{ splash.style.display='none'; }, 260);
         }
@@ -2044,6 +2072,7 @@
         splashRemember.checked = !!saved.remember;
         // Show offline option only if there is already data saved locally
         if(saved.id) splashOffline.classList.remove('hidden');
+        document.body.style.overflow='hidden';
         document.body.style.opacity='1';
 
         // Skip splash if session is still valid (within 30 minutes)
