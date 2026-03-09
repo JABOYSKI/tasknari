@@ -1600,13 +1600,18 @@ def check_pellet_hits_ammonites(player, ammonites):
         hit = False
         px, py, pz = p[0], p[1], p[2]
         for am in ammonites:
-            if not am.alive or am.is_corpse:
+            if not am.alive and not am.is_corpse:
                 continue
             dx = px - am.pos[0]
             dy = py - am.pos[1]
             dz = pz - am.pos[2]
             dist = math.sqrt(dx*dx + dy*dy + dz*dz)
             if dist < AMMONITE_RADIUS:
+                if am.is_corpse:
+                    # Shotgun hit on corpse: add 0.5s, capped at max
+                    am.corpse_timer = min(am.corpse_timer + 0.5, AMMONITE_CORPSE_REVIVE)
+                    hit = True
+                    break
                 dmg = AMMONITE_PELLET_DAMAGE
                 am.hp -= dmg
                 am.damage_numbers.append([
