@@ -938,7 +938,7 @@ def create_spawners(player_pos, count=SPAWNER_COUNT):
         dist = random.uniform(SPAWNER_MIN_DIST, SPAWNER_SPAWN_RANGE)
         x = player_pos[0] + math.cos(angle) * dist
         z = player_pos[2] + math.sin(angle) * dist
-        spawners.append(Spawner(x, z))
+        spawners.append(Spawner(x, z, instant=True))
     return spawners
 
 
@@ -961,6 +961,14 @@ def update_spawners(spawners, skulls, player, dt):
 
         if not sp.alive:
             continue
+
+        # Spawn-in telegraph
+        if sp.spawning_in:
+            sp.spawn_in_timer -= dt
+            sp.rotation += 90.0 * dt  # spin faster while spawning in
+            if sp.spawn_in_timer <= 0:
+                sp.spawning_in = False
+            continue  # don't do anything else while spawning in
 
         # Rotate
         sp.rotation += 45.0 * dt  # degrees per second
@@ -1050,6 +1058,53 @@ def draw_spawners(spawners, sphere_dl=None):
 
         x, y, z = sp.pos
         size = SPAWNER_RADIUS * 1.5  # visual size larger than collision
+
+        # Spawn-in hologram rendering
+        if sp.spawning_in:
+            spawn_frac = 1.0 - (sp.spawn_in_timer / SPAWN_IN_DURATION)  # 0->1
+            flicker = 0.5 + 0.5 * math.sin(fire_t * (10 + spawn_frac * 20))
+            alpha = spawn_frac * 0.6 * flicker
+
+            glPushMatrix()
+            glTranslatef(x, y, z)
+            glRotatef(sp.rotation, 0, 1, 0)
+
+            eq = size * 0.7
+            sides = [[eq, 0, 0], [0, 0, eq], [-eq, 0, 0], [0, 0, -eq]]
+            top = [0, size, 0]
+            bottom = [0, -size, 0]
+
+            # Wireframe diamond hologram
+            glLineWidth(2.0)
+            glColor4f(0.3, 0.5 + flicker * 0.3, 1.0, alpha)
+            glBegin(GL_LINES)
+            for i in range(4):
+                s1 = sides[i]
+                s2 = sides[(i + 1) % 4]
+                glVertex3f(top[0], top[1], top[2])
+                glVertex3f(s1[0], s1[1], s1[2])
+                glVertex3f(bottom[0], bottom[1], bottom[2])
+                glVertex3f(s1[0], s1[1], s1[2])
+                glVertex3f(s1[0], s1[1], s1[2])
+                glVertex3f(s2[0], s2[1], s2[2])
+            glEnd()
+
+            # Translucent faces
+            glColor4f(0.2, 0.4, 1.0, alpha * 0.3)
+            glBegin(GL_TRIANGLES)
+            for i in range(4):
+                s1 = sides[i]
+                s2 = sides[(i + 1) % 4]
+                glVertex3f(top[0], top[1], top[2])
+                glVertex3f(s1[0], s1[1], s1[2])
+                glVertex3f(s2[0], s2[1], s2[2])
+                glVertex3f(bottom[0], bottom[1], bottom[2])
+                glVertex3f(s2[0], s2[1], s2[2])
+                glVertex3f(s1[0], s1[1], s1[2])
+            glEnd()
+
+            glPopMatrix()
+            continue
 
         # Flash rate increases as spawn approaches
         flash_rate = sp.flash_rate()
@@ -1315,7 +1370,7 @@ def check_pellet_hits(player, skulls):
 # =============================================================================
 
 class Ammonite:
-    def __init__(self, x, z):
+    def __init__(self, x, z, instant=False):
         self.pos = [x, AMMONITE_HOVER_HEIGHT, z]
         self.vel = [0.0, 0.0, 0.0]
         self.hp = AMMONITE_HP
@@ -1334,13 +1389,13 @@ class Ammonite:
         self.orbit_radius = 200.0  # distance from group center
         self.orbit_speed = random.uniform(0.4, 0.8)  # radians per second
         self.bank_angle = 0.0  # tilt when turning
-        self.spawn_in_timer = SPAWN_IN_DURATION  # telegraph before appearing
-        self.spawning_in = True
+        self.spawn_in_timer = 0.0 if instant else SPAWN_IN_DURATION  # telegraph before appearing
+        self.spawning_in = not instant
 
 
 _ammonite_group_id = [0]
 
-def _spawn_ammonite_group(cx, cz):
+def _spawn_ammonite_group(cx, cz, instant=False):
     """Spawn a group of 3 ammonites near a center point."""
     group = []
     for i in range(3):
@@ -1348,7 +1403,7 @@ def _spawn_ammonite_group(cx, cz):
         offset_dist = random.uniform(240, 540)
         x = cx + math.cos(offset_angle) * offset_dist
         z = cz + math.sin(offset_angle) * offset_dist
-        am = Ammonite(x, z)
+        am = Ammonite(x, z, instant=instant)
         am.group_center = [cx, cz]
         am.orbit_phase = (i / 3) * math.pi * 2
         am.orbit_radius = offset_dist
@@ -1364,7 +1419,7 @@ def create_ammonites(player_pos, count=AMMONITE_COUNT):
         dist = random.uniform(AMMONITE_MIN_DIST, AMMONITE_SPAWN_RANGE)
         cx = player_pos[0] + math.cos(angle) * dist
         cz = player_pos[2] + math.sin(angle) * dist
-        ammonites.extend(_spawn_ammonite_group(cx, cz))
+        ammonites.extend(_spawn_ammonite_group(cx, cz, instant=True))
     return ammonites
 
 
@@ -1450,6 +1505,14 @@ def update_ammonites(ammonites, player, dt, pickup_sounds=None):
 
         if not am.alive:
             continue
+
+        # Spawn-in telegraph
+        if am.spawning_in:
+            am.spawn_in_timer -= dt
+            am.rotation += 60.0 * dt
+            if am.spawn_in_timer <= 0:
+                am.spawning_in = False
+            continue  # don't move or collide while spawning in
 
         am.bob_phase += dt * 2.0
 
@@ -1573,6 +1636,43 @@ def draw_ammonites(ammonites, disc_dl=None):
             continue
 
         x, y, z = am.pos
+
+        # Spawn-in hologram rendering
+        if am.spawning_in:
+            spawn_frac = 1.0 - (am.spawn_in_timer / SPAWN_IN_DURATION)  # 0->1
+            flicker = 0.5 + 0.5 * math.sin(fire_t * (10 + spawn_frac * 20))
+            alpha = spawn_frac * 0.6 * flicker
+
+            glPushMatrix()
+            glTranslatef(x, y, z)
+            glRotatef(am.rotation, 0, 1, 0)
+
+            # Wireframe disc hologram
+            glColor4f(0.3, 0.5 + flicker * 0.3, 1.0, alpha)
+            glLineWidth(2.0)
+            glBegin(GL_LINE_LOOP)
+            for i in range(_DISC_SEGS):
+                glVertex3f(_disc_cos[i] * r, 0, _disc_sin[i] * r)
+            glEnd()
+
+            # Cross lines
+            glBegin(GL_LINES)
+            glVertex3f(-r, 0, 0)
+            glVertex3f(r, 0, 0)
+            glVertex3f(0, 0, -r)
+            glVertex3f(0, 0, r)
+            glEnd()
+
+            # Translucent fill
+            glColor4f(0.2, 0.4, 1.0, alpha * 0.2)
+            glPushMatrix()
+            glScalef(r, r, r)
+            if disc_dl:
+                glCallList(disc_dl)
+            glPopMatrix()
+
+            glPopMatrix()
+            continue
 
         glPushMatrix()
         glTranslatef(x, y, z)
