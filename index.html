@@ -64,13 +64,19 @@
     }
     .btn-primary:hover{background:var(--orange-hover);border-color:var(--orange)}
     .btn-save{
-      background:var(--orange);border-color:#c97800;color:#111;font-weight:800;
+      background:var(--card);border-color:var(--border);color:var(--text);font-weight:800;
       letter-spacing:.02em;
-      box-shadow:0 2px 8px rgba(255,153,0,.35);
-      transition:background .12s,box-shadow .12s,transform .1s;
+      box-shadow:none;
+      transition:background .25s,box-shadow .25s,border-color .25s,color .25s,transform .1s;
     }
-    .btn-save:hover{background:var(--orange-hover);box-shadow:0 4px 16px rgba(255,153,0,.5)}
-    .btn-save:active{transform:scale(0.93);box-shadow:0 1px 4px rgba(255,153,0,.2)}
+    .btn-save:hover{background:var(--card-hover);border-color:#4A6080}
+    .btn-save:active{transform:scale(0.93)}
+    .btn-save.has-changes{
+      background:var(--orange);border-color:#c97800;color:#111;
+      box-shadow:0 2px 8px rgba(255,153,0,.35);
+    }
+    .btn-save.has-changes:hover{background:var(--orange-hover);box-shadow:0 4px 16px rgba(255,153,0,.5)}
+    .btn-save.has-changes:active{transform:scale(0.93);box-shadow:0 1px 4px rgba(255,153,0,.2)}
     .btn-save.saved{background:#1a7a3a;border-color:#145e2c;color:#7fffaa;
       box-shadow:0 2px 10px rgba(26,122,58,.45);pointer-events:none}
     .btn-save.saving{opacity:.7;pointer-events:none}
@@ -643,7 +649,7 @@
     <button id="splashConfirm" class="btn btn-primary" style="width:100%;margin-top:4px">Log In</button>
     <button id="splashOffline" class="btn hidden" style="width:100%;margin-top:8px;background:transparent;border-color:var(--border);color:var(--muted-color)">Work Offline (use last saved data)</button>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
-      <div style="font-size:.72rem;color:#3d5066">updated Mar 8 2026 19:16:39</div>
+      <div style="font-size:.72rem;color:#3d5066">updated Mar 8 2026 19:44:49</div>
       <button id="splashCheckUpdate" style="background:none;border:none;font-size:.72rem;color:#3d5066;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px">Check for update</button>
     </div>
   </div>
@@ -989,12 +995,25 @@
       function now(){ return Date.now(); }
       function uid(){ return Math.random().toString(36).slice(2)+now().toString(36); }
       function load(k,f){ try{const r=localStorage.getItem(k); return r?JSON.parse(r):f;}catch{return f;} }
+      let hasUnsavedChanges = false;
+      function markUnsaved(){
+        hasUnsavedChanges = true;
+        const btn = document.getElementById('saveBtn');
+        if(btn) btn.classList.add('has-changes');
+      }
+      function markSaved(){
+        hasUnsavedChanges = false;
+        const btn = document.getElementById('saveBtn');
+        if(btn) btn.classList.remove('has-changes');
+      }
       function save(k,v){
         try{ localStorage.setItem(k,JSON.stringify(v)); }catch{}
         // Mark dirty only for data keys (not settings), and only when offline
         if(!navigator.onLine && Object.values(STORAGE_KEYS).includes(k)){
           localStorage.setItem(DIRTY_KEY,'1');
         }
+        // Track unsaved changes for save button glow
+        if(Object.values(STORAGE_KEYS).includes(k)) markUnsaved();
       }
       function clearDirty(){ localStorage.removeItem(DIRTY_KEY); }
       function isDirty(){ return localStorage.getItem(DIRTY_KEY)==='1'; }
@@ -1237,9 +1256,9 @@
                     </div>`:''}
                 </div>
                 <div class="row-actions col" style="gap:6px">
-                  <button class="btn" data-action="editStart" data-id="${it.id}">${ui.editStartId===it.id?'Editing\u2026':'Edit Start'}</button>
-                  <button class="btn" data-action="restore" data-id="${it.id}">Restore</button>
-                  <button class="btn btn-danger" data-action="deleteDone" data-id="${it.id}">Delete</button>
+                  <button class="btn" data-action="editStart" data-id="${it.id}" title="${ui.editStartId===it.id?'Editing…':'Edit start date'}" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M15.5 4.5l4 4L8 20H4v-4L15.5 4.5z" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="13" y1="7" x2="17" y2="11" stroke="#999" stroke-width="1.5"/></svg></button>
+                  <button class="btn" data-action="restore" data-id="${it.id}" title="Restore to active" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M9 14l-4-4 4-4" stroke="#FF9900" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10h10a4 4 0 0 1 0 8H12" stroke="#FF9900" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                  <button class="btn btn-danger" data-action="deleteDone" data-id="${it.id}" title="Delete" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><line x1="7" y1="7" x2="17" y2="17" stroke="#e05050" stroke-width="2.5" stroke-linecap="round"/><line x1="17" y1="7" x2="7" y2="17" stroke="#e05050" stroke-width="2.5" stroke-linecap="round"/></svg></button>
                 </div>
               </div>`;
             el.doneList.appendChild(li);
@@ -1309,12 +1328,12 @@
                 ${t.lastCompleted?`<div class="muted small" style="color:var(--teal)">&#10003; Last completed: ${new Date(t.lastCompleted).toLocaleString()}</div>`:''}
               </div>
               <div class="row-actions col" style="gap:6px">
-                ${editing ? `<button class="btn" data-action="saveEdit" data-id="${t.id}">Save</button>
-                             <button class="btn" data-action="cancelEdit" data-id="${t.id}">Cancel</button>`
-                          : `<button class="btn" data-action="edit" data-id="${t.id}">Edit</button>`}
-                <button class="btn" data-action="complete" data-id="${t.id}" title="Mark as done">Done</button>
+                ${editing ? `<button class="btn" data-action="saveEdit" data-id="${t.id}" title="Save" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><polyline points="6,12 10,17 18,7" stroke="#2a9d2a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                             <button class="btn" data-action="cancelEdit" data-id="${t.id}" title="Cancel" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><line x1="7" y1="7" x2="17" y2="17" stroke="#999" stroke-width="2.5" stroke-linecap="round"/><line x1="17" y1="7" x2="7" y2="17" stroke="#999" stroke-width="2.5" stroke-linecap="round"/></svg></button>`
+                          : `<button class="btn" data-action="edit" data-id="${t.id}" title="Edit" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M15.5 4.5l4 4L8 20H4v-4L15.5 4.5z" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="13" y1="7" x2="17" y2="11" stroke="#999" stroke-width="1.5"/></svg></button>`}
+                <button class="btn" data-action="complete" data-id="${t.id}" title="Mark as done" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><polyline points="6,12 10,17 18,7" stroke="#2a9d2a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                 <button class="btn" data-action="toggleRecurring" data-id="${t.id}" title="Toggle recurring — when on, Done stamps a timestamp instead of archiving" style="padding:5px 8px;${t.recurring?'border-color:var(--orange);box-shadow:0 0 0 1px rgba(255,153,0,.2)':''}">${recurIcon(!!t.recurring)}</button>
-                <button class="btn btn-danger" data-action="delete" data-id="${t.id}">Delete</button>
+                <button class="btn btn-danger" data-action="delete" data-id="${t.id}" title="Delete" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><line x1="7" y1="7" x2="17" y2="17" stroke="#e05050" stroke-width="2.5" stroke-linecap="round"/><line x1="17" y1="7" x2="7" y2="17" stroke="#e05050" stroke-width="2.5" stroke-linecap="round"/></svg></button>
               </div>
             </div>`;
           // Touch drag — handle-only touchstart; preventDefault blocks native long-press
@@ -2213,7 +2232,7 @@
             tasks=Array.isArray(remote.tasks)?remote.tasks:[]; done=Array.isArray(remote.done)?remote.done:[];
             if(Array.isArray(remote.ids)) ids=remote.ids;
             save(STORAGE_KEYS.tasks,tasks); save(STORAGE_KEYS.done,done); save(IDS_KEY,ids); render(); renderIds();
-            clearDirty();
+            clearDirty(); markSaved();
             showToast('Pulled from Gist');
           }
           if(remoteAt>=localAt){ applyRemote(); }
@@ -2233,7 +2252,7 @@
           const id=el.gist.id.value.trim(); if(!id){ showError('Enter your Gist ID in Settings'); return; }
           const body={ files:{ 'todo-data.json':{ content:JSON.stringify({tasks,done,ids,updatedAt:new Date().toISOString()},null,2) } } };
           await gistFetch(`/gists/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-          clearDirty();
+          clearDirty(); markSaved();
           showToast('Pushed to Gist');
         } finally { syncEnd(); }
       }
