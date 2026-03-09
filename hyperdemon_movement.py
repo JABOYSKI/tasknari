@@ -901,8 +901,10 @@ def update_skulls(skulls, player, dt):
 # Spawners - Rotating Diamond Structures
 # =============================================================================
 
+SPAWN_IN_DURATION = 4.0  # seconds for entities to materialize
+
 class Spawner:
-    def __init__(self, x, z):
+    def __init__(self, x, z, instant=False):
         self.pos = [x, 120.0, z]  # float above ground
         self.hp = SPAWNER_HP
         self.max_hp = SPAWNER_HP
@@ -913,6 +915,8 @@ class Spawner:
         self.damage_numbers = []
         self.spawn_queue = 0  # skulls waiting to be spewed out
         self.spawn_tick = 0.0  # timer between individual skull launches
+        self.spawn_in_timer = 0.0 if instant else SPAWN_IN_DURATION  # telegraph before appearing
+        self.spawning_in = not instant
 
     def flash_rate(self):
         """Returns flashes per second based on how close to spawning."""
@@ -1215,44 +1219,44 @@ def draw_spawners(spawners, sphere_dl=None):
             glEnd()
             glEnable(GL_DEPTH_TEST)
 
-        # Spawn preview hologram — show faint blue skull when spawn is < 6 seconds away
+        # Spawn preview hologram — show blue skull above spawner when spawn is < 6 seconds away
         if sp.spawn_timer < 6.0 and sp.spawn_queue == 0 and sphere_dl:
             preview_frac = 1.0 - (sp.spawn_timer / 6.0)  # 0 at 6s, 1 at 0s
             # Flash faster as spawn approaches
-            flash_speed = 2.0 + preview_frac * 15.0
+            flash_speed = 2.0 + preview_frac * 20.0
             flash = 0.5 + 0.5 * math.sin(fire_t * flash_speed)
-            # Visibility increases as timer decreases
-            alpha = preview_frac * 0.4 * flash
+            # Visibility: starts faint, gets bright + flashy
+            base_alpha = 0.15 + preview_frac * 0.6
+            alpha = base_alpha * (0.5 + 0.5 * flash)
 
-            if alpha > 0.02:
-                glDisable(GL_DEPTH_TEST)
-                glEnable(GL_BLEND)
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            glDisable(GL_DEPTH_TEST)
+            glEnable(GL_BLEND)
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-                # Draw a wispy blue skull above the spawner
-                preview_y = y + size + 30 + math.sin(fire_t * 2) * 10
-                glColor4f(0.3, 0.5, 1.0, alpha)
-                glPushMatrix()
-                glTranslatef(x, preview_y, z)
-                skull_preview_r = SKULL_RADIUS * (0.8 + preview_frac * 0.4)
-                glScalef(skull_preview_r, skull_preview_r, skull_preview_r)
-                glCallList(sphere_dl)
-                glPopMatrix()
+            # Draw large blue skull preview above the spawner
+            preview_y = y + size + 80 + math.sin(fire_t * 2) * 20
+            skull_preview_r = SKULL_RADIUS * (2.0 + preview_frac * 2.0)
+            glColor4f(0.3, 0.5, 1.0, alpha)
+            glPushMatrix()
+            glTranslatef(x, preview_y, z)
+            glScalef(skull_preview_r, skull_preview_r, skull_preview_r)
+            glCallList(sphere_dl)
+            glPopMatrix()
 
-                # Wispy particles around the preview
-                glPointSize(3.0)
-                glBegin(GL_POINTS)
-                for i in range(6):
-                    pa = fire_t * 3 + i * (math.pi * 2 / 6)
-                    pr = skull_preview_r * 1.5
-                    px = x + math.cos(pa) * pr
-                    py2 = preview_y + math.sin(pa * 1.3 + i) * skull_preview_r
-                    pz = z + math.sin(pa) * pr
-                    glColor4f(0.4, 0.6, 1.0, alpha * 0.7)
-                    glVertex3f(px, py2, pz)
-                glEnd()
+            # Wispy particles orbiting the preview
+            glPointSize(5.0)
+            glBegin(GL_POINTS)
+            for i in range(8):
+                pa = fire_t * 3 + i * (math.pi * 2 / 8)
+                pr = skull_preview_r * 2.0
+                px = x + math.cos(pa) * pr
+                py2 = preview_y + math.sin(pa * 1.3 + i) * skull_preview_r * 0.8
+                pz = z + math.sin(pa) * pr
+                glColor4f(0.4, 0.6, 1.0, alpha * 0.8)
+                glVertex3f(px, py2, pz)
+            glEnd()
 
-                glEnable(GL_DEPTH_TEST)
+            glEnable(GL_DEPTH_TEST)
 
 
 def check_pellet_hits(player, skulls):
@@ -1329,6 +1333,9 @@ class Ammonite:
         self.orbit_phase = 0.0  # current angle in orbit
         self.orbit_radius = 200.0  # distance from group center
         self.orbit_speed = random.uniform(0.4, 0.8)  # radians per second
+        self.bank_angle = 0.0  # tilt when turning
+        self.spawn_in_timer = SPAWN_IN_DURATION  # telegraph before appearing
+        self.spawning_in = True
 
 
 _ammonite_group_id = [0]
@@ -1478,6 +1485,13 @@ def update_ammonites(ammonites, player, dt, pickup_sounds=None):
             # Smooth rotation toward movement direction
             diff = (target_rot - am.rotation + 180) % 360 - 180
             am.rotation += diff * 3.0 * dt
+            # Tilt into the turn based on how hard we're turning
+            target_bank = diff * -0.8  # negative = lean into the turn
+            target_bank = max(-35.0, min(35.0, target_bank))  # cap at 35 degrees
+        else:
+            target_bank = 0.0
+        # Smooth the bank angle
+        am.bank_angle += (target_bank - am.bank_angle) * 4.0 * dt
 
         # Hover height spring
         target_y = AMMONITE_HOVER_HEIGHT + math.sin(am.bob_phase) * 15.0
@@ -1563,6 +1577,7 @@ def draw_ammonites(ammonites, disc_dl=None):
         glPushMatrix()
         glTranslatef(x, y, z)
         glRotatef(am.rotation, 0, 1, 0)
+        glRotatef(am.bank_angle, 0, 0, 1)  # tilt into turns
 
         # Corpse: grey/dark, flicker as revive approaches
         if am.is_corpse:
@@ -2613,6 +2628,21 @@ def main():
                     player.state = STATE_GROUND
                     player.current_height = PLAYER_HEIGHT
                     player.has_dashed = False
+                elif event.key == K_BACKSPACE:
+                    # Full reset: respawn player and reset all enemies
+                    player.alive = True
+                    player.hp = PLAYER_MAX_HP
+                    player.pos = [0.0, PLAYER_HEIGHT, 0.0]
+                    player.vel = [0.0, 0.0, 0.0]
+                    player.state = STATE_GROUND
+                    player.current_height = PLAYER_HEIGHT
+                    player.has_dashed = False
+                    player.dash_cooldown_timer = 0.0
+                    player.pellets = []
+                    skulls = []
+                    spawners = create_spawners(player.pos)
+                    spawner_new_timer = 0.0
+                    ammonites = create_ammonites(player.pos)
                 elif event.key == K_SPACE:
                     player.space_just_pressed = True
                     player.space_held = True
@@ -2649,33 +2679,9 @@ def main():
         # Input
         keys = pygame.key.get_pressed()
 
-        # Death timer / respawn
+        # Death screen — stay dead until backspace
         if not player.alive:
-            player.death_timer -= dt
-            if player.death_timer <= 0:
-                player.alive = True
-                player.hp = PLAYER_MAX_HP
-                player.pos = [0.0, PLAYER_HEIGHT, 0.0]
-                player.vel = [0.0, 0.0, 0.0]
-                player.state = STATE_GROUND
-                player.current_height = PLAYER_HEIGHT
-                player.has_dashed = False
-                # Push skulls away on respawn
-                for skull in skulls:
-                    if skull.alive:
-                        sdx = skull.pos[0] - player.pos[0]
-                        sdz = skull.pos[2] - player.pos[2]
-                        sd = math.sqrt(sdx*sdx + sdz*sdz)
-                        if sd < SKULL_MIN_DIST:
-                            if sd < 1:
-                                sdx, sdz = random.uniform(-1,1), random.uniform(-1,1)
-                                sd = 1.0
-                            skull.pos[0] = player.pos[0] + (sdx/sd) * SKULL_MIN_DIST
-                            skull.pos[2] = player.pos[2] + (sdz/sd) * SKULL_MIN_DIST
-            # Still update skulls/damage numbers while dead
-            skulls = update_skulls(skulls, player, dt)
-            spawners = update_spawners(spawners, skulls, player, dt)
-            ammonites = update_ammonites(ammonites, player, dt, ammonite_pickup_sounds)
+            pass  # enemies frozen, wait for backspace reset
         else:
             # Update physics
             update_player(player, keys, dt)
