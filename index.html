@@ -649,7 +649,7 @@
     <button id="splashConfirm" class="btn btn-primary" style="width:100%;margin-top:4px">Log In</button>
     <button id="splashOffline" class="btn hidden" style="width:100%;margin-top:8px;background:transparent;border-color:var(--border);color:var(--muted-color)">Work Offline (use last saved data)</button>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
-      <div style="font-size:.72rem;color:#3d5066">updated Mar 8 2026 19:44:49</div>
+      <div style="font-size:.72rem;color:#3d5066">updated Mar 8 2026 19:56:15</div>
       <button id="splashCheckUpdate" style="background:none;border:none;font-size:.72rem;color:#3d5066;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px">Check for update</button>
     </div>
   </div>
@@ -713,9 +713,7 @@
           <input type="checkbox" id="autoSave" disabled/> Autosave (60s)
         </label>
         <span class="muted small" style="color:#6b7280">(Chrome/Edge only)</span>
-        <label class="muted" style="display:flex;align-items:center;gap:4px;margin-left:8px">
-          <input type="checkbox" id="globalLineMode"/> Line strike mode
-        </label>
+        <input type="checkbox" id="globalLineMode" style="display:none"/>
         <span style="border-left:1px solid var(--border);margin:0 4px;align-self:stretch"></span>
         <button class="btn" id="exportAll">Export</button>
         <label class="btn" for="importInput">Import</label>
@@ -749,7 +747,7 @@
     </div>
     <div style="margin-bottom:10px">
       <button class="btn btn-tool" id="questClear" title="Clear all quest list selections"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13" fill="none"><polyline points="6,12 10,16 18,8" stroke="#d0d0d0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="5" y1="5" x2="19" y2="19" stroke="#e05050" stroke-width="2" stroke-linecap="round" opacity="0.9"/></svg></button>
-      <button id="mdHelpBtn" class="btn btn-tool" title="Markdown formatting"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M3 18V6l5 7.5L13 6v12" stroke="#999" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="17,10 20,14 23,10" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></button><button id="searchToggleBtn" class="btn btn-tool" title="Search tasks"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13" fill="none"><circle cx="10" cy="10" r="5.5" stroke="#999" stroke-width="2.2"/><line x1="14" y1="14" x2="20" y2="20" stroke="#999" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+      <button id="mdHelpBtn" class="btn btn-tool" title="Markdown formatting"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M3 18V6l5 7.5L13 6v12" stroke="#999" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="17,10 20,14 23,10" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></button><button id="searchToggleBtn" class="btn btn-tool" title="Search tasks"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13" fill="none"><circle cx="10" cy="10" r="5.5" stroke="#999" stroke-width="2.2"/><line x1="14" y1="14" x2="20" y2="20" stroke="#999" stroke-width="2.2" stroke-linecap="round"/></svg></button><button id="lineStrikeBtn" class="btn btn-tool" title="Line strike mode"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13" fill="none"><line x1="3" y1="12" x2="21" y2="12" stroke="#999" stroke-width="2" stroke-linecap="round"/><text x="12" y="17" text-anchor="middle" font-size="12" font-weight="700" fill="#999" font-family="sans-serif">S</text></svg></button>
       <div id="mdHelpPanel" style="display:none;margin-top:6px;padding:7px 12px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--muted-color);flex-wrap:wrap;gap:6px 16px">
         <span><code>**bold**</code></span>
         <span><code>*italic*</code></span>
@@ -785,7 +783,7 @@
         <div class="row" style="align-items:center;gap:8px;margin-bottom:4px">
           <button class="collapse-btn" data-group="high" title="Collapse/expand">▼</button>
           <span class="badge badge-high"><span class="dot"></span>High</span>
-          <span class="muted" id="count-high">0</span>
+          <span class="muted" id="count-high" style="display:none">0</span>
         </div>
         <div class="dropzone" data-prio="high">
           <ul class="list" id="list-high"></ul>
@@ -797,7 +795,7 @@
         <div class="row" style="align-items:center;gap:8px;margin-bottom:4px">
           <button class="collapse-btn" data-group="medium" title="Collapse/expand">▼</button>
           <span class="badge badge-medium"><span class="dot"></span>Medium</span>
-          <span class="muted" id="count-medium">0</span>
+          <span class="muted" id="count-medium" style="display:none">0</span>
         </div>
         <div class="dropzone" data-prio="medium">
           <ul class="list" id="list-medium"></ul>
@@ -809,7 +807,7 @@
         <div class="row" style="align-items:center;gap:8px;margin-bottom:4px">
           <button class="collapse-btn" data-group="low" title="Collapse/expand">▼</button>
           <span class="badge badge-low"><span class="dot"></span>Low</span>
-          <span class="muted" id="count-low">0</span>
+          <span class="muted" id="count-low" style="display:none">0</span>
         </div>
         <div class="dropzone" data-prio="low">
           <ul class="list" id="list-low"></ul>
@@ -1328,7 +1326,7 @@
                 ${t.lastCompleted?`<div class="muted small" style="color:var(--teal)">&#10003; Last completed: ${new Date(t.lastCompleted).toLocaleString()}</div>`:''}
               </div>
               <div class="row-actions col" style="gap:6px">
-                ${editing ? `<button class="btn" data-action="saveEdit" data-id="${t.id}" title="Save" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><polyline points="6,12 10,17 18,7" stroke="#2a9d2a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                ${editing ? `<button class="btn" data-action="saveEdit" data-id="${t.id}" title="Save edit" style="padding:5px 8px;border-color:var(--orange);box-shadow:0 0 0 1px rgba(255,153,0,.3)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M15.5 4.5l4 4L8 20H4v-4L15.5 4.5z" stroke="#FF9900" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="13" y1="7" x2="17" y2="11" stroke="#FF9900" stroke-width="1.5"/></svg></button>
                              <button class="btn" data-action="cancelEdit" data-id="${t.id}" title="Cancel" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><line x1="7" y1="7" x2="17" y2="17" stroke="#999" stroke-width="2.5" stroke-linecap="round"/><line x1="17" y1="7" x2="7" y2="17" stroke="#999" stroke-width="2.5" stroke-linecap="round"/></svg></button>`
                           : `<button class="btn" data-action="edit" data-id="${t.id}" title="Edit" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M15.5 4.5l4 4L8 20H4v-4L15.5 4.5z" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="13" y1="7" x2="17" y2="11" stroke="#999" stroke-width="1.5"/></svg></button>`}
                 <button class="btn" data-action="complete" data-id="${t.id}" title="Mark as done" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><polyline points="6,12 10,17 18,7" stroke="#2a9d2a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -1599,6 +1597,12 @@
       el.globalLineMode.addEventListener('change', e=>{
         ui.lineModeGlobal=e.target.checked;
         document.querySelectorAll('.line').forEach(n=>n.classList.toggle('clickable', ui.lineModeGlobal));
+        const lsb=document.getElementById('lineStrikeBtn');
+        if(lsb){ if(ui.lineModeGlobal){lsb.style.borderColor='var(--orange)';lsb.style.boxShadow='0 0 0 1px rgba(255,153,0,.3)';} else {lsb.style.borderColor='';lsb.style.boxShadow='';} }
+      });
+      document.getElementById('lineStrikeBtn').addEventListener('click', ()=>{
+        el.globalLineMode.checked=!el.globalLineMode.checked;
+        el.globalLineMode.dispatchEvent(new Event('change'));
       });
 
       el.toggleDone.addEventListener('click', ()=>{
