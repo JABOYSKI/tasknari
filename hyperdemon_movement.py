@@ -99,6 +99,7 @@ SPAWNER_NEW_INTERVAL = 30.0  # seconds between new spawner appearances
 SPAWNER_MAX = 8  # max active spawners
 SPAWNER_PELLET_DAMAGE = 6  # damage per pellet hit
 SKULL_KILL_RADIUS = 30.0  # skull touches player = death
+SPAWNER_PREVIEW_LAUNCH = 2000.0  # impulse when player touches spawn preview
 SKULL_WARN_RADIUS = 500.0  # red hologram overlay starts at this distance
 
 # Ammonites (flat floating spiral enemies)
@@ -128,7 +129,7 @@ SHOTGUN_COOLDOWN = 0.75
 SHOTGUN_PELLET_COUNT = 118
 SHOTGUN_SPREAD = 15.0  # degrees
 SHOTGUN_PELLET_SPEED = 1995.0
-SHOTGUN_PELLET_LIFETIME = 1.2  # seconds
+SHOTGUN_PELLET_LIFETIME = 30.0  # seconds (effectively infinite — pellets reach map edge first)
 SHOTGUN_KNOCKBACK = 831.0  # thrust applied to player opposite to firing direction
 
 # Diagonal speed factor (sqrt(2)/2 normalized but slightly boosted)
@@ -714,8 +715,10 @@ def update_pellets(player, dt):
         p[0] += p[3] * dt
         p[1] += p[4] * dt
         p[2] += p[5] * dt
-        # Pellets hit the ground
+        # Pellets hit the ground or leave map
         if p[1] <= 0:
+            continue
+        if abs(p[0]) > 10000 or abs(p[2]) > 10000 or p[1] > 10000:
             continue
         alive.append(p)
     player.pellets = alive
@@ -942,7 +945,7 @@ def create_spawners(player_pos, count=SPAWNER_COUNT):
     return spawners
 
 
-def update_spawners(spawners, skulls, player, dt):
+def update_spawners(spawners, skulls, player, dt, crystal_shatter_sound=None):
     """Update spawners: rotate, tick spawn timer, spawn skulls, tick damage numbers."""
     alive_spawners = []
     for sp in spawners:
@@ -1003,6 +1006,39 @@ def update_spawners(spawners, skulls, player, dt):
                 skulls.append(skull)
                 sp.spawn_queue -= 1
                 sp.spawn_tick = 0.08  # 80ms between each skull
+
+        # Check if player touches the blue spawn preview above spawner
+        if player.alive and sp.spawn_timer < 6.0 and sp.spawn_queue == 0:
+            size = SPAWNER_RADIUS * 1.5
+            preview_y = sp.pos[1] + size + 80
+            preview_frac = 1.0 - (sp.spawn_timer / 6.0)
+            preview_r = SKULL_RADIUS * (2.0 + preview_frac * 2.0) + 30.0  # generous hitbox
+            dx = player.pos[0] - sp.pos[0]
+            dy = player.pos[1] - preview_y
+            dz = player.pos[2] - sp.pos[2]
+            dist = math.sqrt(dx*dx + dy*dy + dz*dz)
+            if dist < preview_r:
+                # Destroy spawner instantly
+                sp.alive = False
+                sp.hp = 0
+                if crystal_shatter_sound:
+                    crystal_shatter_sound.play()
+                # Launch player forward in their current movement vector
+                vx, vy, vz = player.vel[0], player.vel[1], player.vel[2]
+                speed = math.sqrt(vx*vx + vy*vy + vz*vz)
+                if speed > 1.0:
+                    nx, ny, nz = vx / speed, vy / speed, vz / speed
+                else:
+                    # Fallback to look direction if barely moving
+                    look = player.get_look_dir()
+                    nx, ny, nz = look[0], look[1], look[2]
+                player.vel[0] = nx * SPAWNER_PREVIEW_LAUNCH
+                player.vel[1] = ny * SPAWNER_PREVIEW_LAUNCH
+                player.vel[2] = nz * SPAWNER_PREVIEW_LAUNCH
+                player.state = STATE_AIRBORNE
+                player.has_dashed = False
+                player.dash_cooldown_timer = 0.0
+                continue  # spawner is dead, skip body collision
 
         # Kill player on touch
         if player.alive:
@@ -2652,6 +2688,31 @@ def generate_ammonite_pickup_sounds(count=8):
     return sounds
 
 
+def generate_crystal_shatter_sound():
+    """Generate a brief crystal/glass shatter sound for spawner preview destruction."""
+    sample_rate = 44100
+    duration = 0.25
+    n_samples = int(sample_rate * duration)
+    samples = array.array("h")
+    for i in range(n_samples):
+        t = i / sample_rate
+        env = math.exp(-t * 18)
+        # High-pitched crystalline tones at multiple frequencies
+        crystal1 = math.sin(2 * math.pi * 2200 * t) * 0.25
+        crystal2 = math.sin(2 * math.pi * 3300 * t) * 0.2
+        crystal3 = math.sin(2 * math.pi * 4800 * t) * math.exp(-t * 30) * 0.15
+        # Noise burst for the shatter texture
+        noise = random.uniform(-1, 1) * 0.35 * math.exp(-t * 25)
+        # Low impact thud
+        thud = math.sin(2 * math.pi * 120 * t) * math.exp(-t * 40) * 0.2
+        sample = int(env * (crystal1 + crystal2 + crystal3 + noise + thud) * 16000)
+        sample = max(-32768, min(32767, sample))
+        samples.append(sample)
+    sound = pygame.mixer.Sound(buffer=samples)
+    sound.set_volume(0.5)
+    return sound
+
+
 def main():
     pygame.init()
     pygame.font.init()
@@ -2661,6 +2722,7 @@ def main():
     land_sound = generate_land_sound()
     shotgun_sound = generate_shotgun_sound()
     ammonite_pickup_sounds = generate_ammonite_pickup_sounds()
+    crystal_shatter_sound = generate_crystal_shatter_sound()
 
     screen_w, screen_h = 1280, 720
     screen = pygame.display.set_mode((screen_w, screen_h), DOUBLEBUF | OPENGL | RESIZABLE)
@@ -2795,7 +2857,7 @@ def main():
             check_pellet_hits_spawners(player, spawners)
             check_pellet_hits_ammonites(player, ammonites)
             skulls = update_skulls(skulls, player, dt)
-            spawners = update_spawners(spawners, skulls, player, dt)
+            spawners = update_spawners(spawners, skulls, player, dt, crystal_shatter_sound)
             ammonites = update_ammonites(ammonites, player, dt, ammonite_pickup_sounds)
 
             # Spawn new ammonite groups periodically
