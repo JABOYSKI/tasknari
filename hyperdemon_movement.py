@@ -82,7 +82,7 @@ SKULL_RADIUS = 40.0  # collision/body radius
 SKULL_WEAKSPOT_RADIUS = 16.0  # weak spot sized to match shotgun spread
 SKULL_HP = 40
 SKULL_SPAWN_RANGE = 2000.0
-SKULL_MIN_DIST = 300.0  # minimum spawn distance from player
+SKULL_MIN_DIST = 600.0  # minimum spawn distance from player
 SKULL_PELLET_DAMAGE = 8  # per pellet hit on body
 SKULL_WEAKSPOT_MULTIPLIER = 3  # damage multiplier on weak spot
 SKULL_MAX = 30  # cap on total skulls
@@ -94,7 +94,7 @@ SPAWNER_REGEN = 80.0  # HP regenerated per second
 SPAWNER_RADIUS = 244.0  # collision radius
 SPAWNER_SPAWN_INTERVAL = 15.0  # seconds between skull spawns
 SPAWNER_SPAWN_RANGE = 1500.0  # how far from player spawners appear
-SPAWNER_MIN_DIST = 400.0  # minimum spawn distance from player
+SPAWNER_MIN_DIST = 800.0  # minimum spawn distance from player
 SPAWNER_NEW_INTERVAL = 30.0  # seconds between new spawner appearances
 SPAWNER_MAX = 8  # max active spawners
 SPAWNER_PELLET_DAMAGE = 6  # damage per pellet hit
@@ -117,7 +117,7 @@ AMMONITE_CORPSE_REVIVE = 6.0  # seconds before corpse revives
 AMMONITE_BOOST_FORWARD = 900.0  # forward boost on corpse pickup (like a dash)
 AMMONITE_BOOST_UP = 900.0  # upward boost - equal to forward for 45° launch
 AMMONITE_SPAWN_RANGE = 1800.0
-AMMONITE_MIN_DIST = 500.0
+AMMONITE_MIN_DIST = 900.0
 AMMONITE_MAX = 6
 AMMONITE_KILL_RADIUS = AMMONITE_RADIUS  # touches player = death
 
