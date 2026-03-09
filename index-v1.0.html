@@ -649,7 +649,7 @@
     <button id="splashConfirm" class="btn btn-primary" style="width:100%;margin-top:4px">Log In</button>
     <button id="splashOffline" class="btn hidden" style="width:100%;margin-top:8px;background:transparent;border-color:var(--border);color:var(--muted-color)">Work Offline (use last saved data)</button>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
-      <div style="font-size:.72rem;color:#3d5066">updated Mar 8 2026 20:09:51</div>
+      <div style="font-size:.72rem;color:#3d5066">updated BUILD_DATE</div>
       <button id="splashCheckUpdate" style="background:none;border:none;font-size:.72rem;color:#3d5066;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px">Check for update</button>
     </div>
   </div>
@@ -686,20 +686,7 @@
       <div style="margin-left:auto;flex-shrink:0" class="row">
         <button class="btn" id="questBtn" title="Quest list" style="display:inline-flex;align-items:center;justify-content:center;padding:8px;min-width:44px;min-height:44px;position:relative"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none"><rect x="2" y="2" width="20" height="20" rx="3" fill="#111"/><rect x="2" y="2" width="20" height="20" rx="3" fill="url(#qsh)" opacity="0.18"/><path d="M3 5 Q3 2 6 2 H20 V5 Z" fill="white" opacity="0.13"/><path d="M20 5 H22 V20 Q22 22 20 22 H20 Z" fill="black" opacity="0.15"/><rect x="5" y="5" width="11" height="15" rx="1.5" fill="#d6d6d6" stroke="#1a1a1a" stroke-width="0.8"/><rect x="5.5" y="5.5" width="10" height="14" rx="1" fill="#e8e8e8"/><rect x="6" y="5.5" width="9" height="2.5" fill="#f4f4f4" opacity="0.5"/><rect x="6" y="18" width="9" height="1" fill="#bbb" opacity="0.4"/><rect x="8" y="4" width="5" height="2.5" rx="1" fill="#888" stroke="#1a1a1a" stroke-width="0.6"/><circle cx="10.5" cy="5" r="0.7" fill="#555"/><polyline points="7,9.5 8.5,11 10.5,8.5" stroke="#2a9d2a" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/><line x1="11.5" y1="9.5" x2="15" y2="9.5" stroke="#555" stroke-width="0.8" stroke-linecap="round"/><polyline points="7,13 8.5,14.5 10.5,12" stroke="#2a9d2a" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/><line x1="11.5" y1="13" x2="15" y2="13" stroke="#555" stroke-width="0.8" stroke-linecap="round"/><rect x="7" y="15.8" width="3.5" height="1.8" rx="0.5" fill="none" stroke="#999" stroke-width="0.7"/><line x1="11.5" y1="16.7" x2="14" y2="16.7" stroke="#999" stroke-width="0.8" stroke-linecap="round"/><line x1="18" y1="18" x2="18" y2="10" stroke="#FF9900" stroke-width="2" stroke-linecap="round"/><polyline points="15.5,12.5 18,10 20.5,12.5" stroke="#FF9900" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><defs><linearGradient id="qsh" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="white"/><stop offset="100%" stop-color="black"/></linearGradient></defs></svg><span id="questBtnLabel" style="display:none">Quest (0)</span><span id="questCount"></span></button>
         <button class="btn btn-save" id="saveBtn" title="Push to Gist"><svg id="saveBtnIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none"><rect x="2" y="2" width="20" height="20" rx="3" fill="#111"/><rect x="2" y="2" width="20" height="20" rx="3" fill="url(#sh)" opacity="0.18"/><rect x="7" y="2" width="11" height="8" rx="1" fill="#d6d6d6"/><rect x="7" y="2" width="11" height="3" rx="1" fill="#f4f4f4"/><rect x="15" y="3.5" width="1.5" height="5" rx="0.75" fill="#aaa"/><rect x="3" y="3" width="3.5" height="5.5" rx="1" fill="#2e2e2e"/><rect x="5" y="13" width="14" height="9" rx="1.5" fill="#222"/><rect x="9" y="13" width="6" height="9" fill="#2a2a2a"/><circle cx="12" cy="17.5" r="1.5" fill="#3a3a3a" stroke="#444" stroke-width="0.5"/><path d="M3 5.5 Q3 2 6 2 H19 V5.5 Z" fill="white" opacity="0.13"/><path d="M20 5 H22 V22 Q22 22 20 22 Z" fill="black" opacity="0.15"/><defs><linearGradient id="sh" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="white"/><stop offset="100%" stop-color="black"/></linearGradient></defs></svg></button>
-        <button class="btn" id="prioBarToggle" title="Toggle priority bar" style="display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;min-width:44px;min-height:44px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none"><rect x="4" y="14" width="4" height="7" rx="1" fill="#888"/><rect x="10" y="9" width="4" height="12" rx="1" fill="#888"/><rect x="16" y="4" width="4" height="17" rx="1" fill="#888"/></svg></button>
         <button class="btn" id="settingsToggle" title="Settings" style="display:inline-flex;align-items:center;justify-content:center;font-size:20px;padding:8px 14px;min-width:44px;min-height:44px">&#9881;</button>
-      </div>
-    </div>
-    <div id="prioBar" style="display:none;padding:4px 16px 8px">
-      <div id="prioBarTrack">
-        <button class="prio-seg" id="seg-high"   data-prio="high"   title="High"></button>
-        <button class="prio-seg" id="seg-medium" data-prio="medium" title="Medium"></button>
-        <button class="prio-seg" id="seg-low"    data-prio="low"    title="Low"></button>
-      </div>
-      <div id="prioBarLegend">
-        <span id="legend-high"   class="prio-legend-item"><span class="dot" style="background:var(--orange)"></span><span id="lbl-high"></span></span>
-        <span id="legend-medium" class="prio-legend-item"><span class="dot" style="background:var(--teal)"></span><span id="lbl-medium"></span></span>
-        <span id="legend-low"    class="prio-legend-item"><span class="dot" style="background:#4A6080"></span><span id="lbl-low"></span></span>
       </div>
     </div>
 
@@ -778,7 +765,19 @@
         <span class="chip" id="activeCount">0 tasks</span>
       </div>
 
-      <!-- Priority bar moved to header -->
+      <!-- Priority proportion bar -->
+      <div id="prioBar" class="hidden" style="margin-bottom:14px">
+        <div id="prioBarTrack">
+          <button class="prio-seg" id="seg-high"   data-prio="high"   title="High"></button>
+          <button class="prio-seg" id="seg-medium" data-prio="medium" title="Medium"></button>
+          <button class="prio-seg" id="seg-low"    data-prio="low"    title="Low"></button>
+        </div>
+        <div id="prioBarLegend">
+          <span id="legend-high"   class="prio-legend-item"><span class="dot" style="background:var(--orange)"></span><span id="lbl-high"></span></span>
+          <span id="legend-medium" class="prio-legend-item"><span class="dot" style="background:var(--teal)"></span><span id="lbl-medium"></span></span>
+          <span id="legend-low"    class="prio-legend-item"><span class="dot" style="background:#4A6080"></span><span id="lbl-low"></span></span>
+        </div>
+      </div>
 
       <div id="group-high" class="section" style="margin-top:8px">
         <div class="row" style="align-items:center;gap:8px;margin-bottom:4px">
@@ -989,7 +988,7 @@
 
       function touchSession(){ localStorage.setItem(SESSION_KEY, Date.now()); }
       function sessionValid(){ const t=parseInt(localStorage.getItem(SESSION_KEY)||'0'); return Date.now()-t < SESSION_DURATION; }
-      const ui = { editTaskId:null, editStartId:null, showDone:true, showPrioBar:false, dirHandle:null, autoSave:false, lineModeGlobal:false, doneYear:null };
+      const ui = { editTaskId:null, editStartId:null, showDone:true, dirHandle:null, autoSave:false, lineModeGlobal:false, doneYear:null };
 
       function now(){ return Date.now(); }
       function uid(){ return Math.random().toString(36).slice(2)+now().toString(36); }
@@ -1071,16 +1070,6 @@
       // Settings toggle
       el.settingsToggle.addEventListener('click', ()=>{
         el.settingsPanel.classList.toggle('open');
-      });
-
-      // Priority bar toggle
-      const prioBarToggle = document.getElementById('prioBarToggle');
-      prioBarToggle.addEventListener('click', ()=>{
-        ui.showPrioBar=!ui.showPrioBar;
-        const bar=document.getElementById('prioBar');
-        bar.style.display=ui.showPrioBar?'':'none';
-        if(ui.showPrioBar){ prioBarToggle.style.borderColor='var(--orange)'; prioBarToggle.style.boxShadow='0 0 0 1px rgba(255,153,0,.3)'; }
-        else { prioBarToggle.style.borderColor=''; prioBarToggle.style.boxShadow=''; }
       });
 
       // Priority bar scroll-to-section
@@ -1191,9 +1180,9 @@
         const total = filtered.length;
         const prioBar = document.getElementById('prioBar');
         if(total === 0){
-          prioBar.style.display='none';
+          prioBar.classList.add('hidden');
         } else {
-          if(ui.showPrioBar) prioBar.style.display='';
+          prioBar.classList.remove('hidden');
           const pcts = { high: groups.high.length/total*100, medium: groups.medium.length/total*100, low: groups.low.length/total*100 };
           document.getElementById('seg-high').style.width   = pcts.high   + '%';
           document.getElementById('seg-medium').style.width = pcts.medium + '%';
@@ -1267,7 +1256,7 @@
                 <div class="row-actions col" style="gap:6px">
                   <button class="btn" data-action="editStart" data-id="${it.id}" title="${ui.editStartId===it.id?'Editing…':'Edit start date'}" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M15.5 4.5l4 4L8 20H4v-4L15.5 4.5z" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="13" y1="7" x2="17" y2="11" stroke="#999" stroke-width="1.5"/></svg></button>
                   <button class="btn" data-action="restore" data-id="${it.id}" title="Restore to active" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M9 14l-4-4 4-4" stroke="#FF9900" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10h10a4 4 0 0 1 0 8H12" stroke="#FF9900" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                  <button class="btn btn-danger" data-action="deleteDone" data-id="${it.id}" title="Delete" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M5 7h14" stroke="#e05050" stroke-width="2" stroke-linecap="round"/><path d="M8 7V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" stroke="#e05050" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13" stroke="#e05050" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#e05050" stroke-width="1.5" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#e05050" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+                  <button class="btn btn-danger" data-action="deleteDone" data-id="${it.id}" title="Delete" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><line x1="7" y1="7" x2="17" y2="17" stroke="#e05050" stroke-width="2.5" stroke-linecap="round"/><line x1="17" y1="7" x2="7" y2="17" stroke="#e05050" stroke-width="2.5" stroke-linecap="round"/></svg></button>
                 </div>
               </div>`;
             el.doneList.appendChild(li);
@@ -1342,7 +1331,7 @@
                           : `<button class="btn" data-action="edit" data-id="${t.id}" title="Edit" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M15.5 4.5l4 4L8 20H4v-4L15.5 4.5z" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="13" y1="7" x2="17" y2="11" stroke="#999" stroke-width="1.5"/></svg></button>`}
                 <button class="btn" data-action="complete" data-id="${t.id}" title="Mark as done" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><polyline points="6,12 10,17 18,7" stroke="#2a9d2a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                 <button class="btn" data-action="toggleRecurring" data-id="${t.id}" title="Toggle recurring — when on, Done stamps a timestamp instead of archiving" style="padding:5px 8px;${t.recurring?'border-color:var(--orange);box-shadow:0 0 0 1px rgba(255,153,0,.2)':''}">${recurIcon(!!t.recurring)}</button>
-                <button class="btn btn-danger" data-action="delete" data-id="${t.id}" title="Delete" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M5 7h14" stroke="#e05050" stroke-width="2" stroke-linecap="round"/><path d="M8 7V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" stroke="#e05050" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13" stroke="#e05050" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#e05050" stroke-width="1.5" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#e05050" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+                <button class="btn btn-danger" data-action="delete" data-id="${t.id}" title="Delete" style="padding:5px 8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><line x1="7" y1="7" x2="17" y2="17" stroke="#e05050" stroke-width="2.5" stroke-linecap="round"/><line x1="17" y1="7" x2="7" y2="17" stroke="#e05050" stroke-width="2.5" stroke-linecap="round"/></svg></button>
               </div>
             </div>`;
           // Touch drag — handle-only touchstart; preventDefault blocks native long-press
