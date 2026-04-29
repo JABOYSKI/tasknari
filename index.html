@@ -2604,7 +2604,7 @@
         }
       });
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/tasknari/sw.js', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
           .then(reg => reg.update())
           .catch(e => console.log('SW failed:', e));
       });

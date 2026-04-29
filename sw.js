@@ -1,10 +1,12 @@
-const CACHE = 'tasknari-~0,12';
+const CACHE = 'tasknari-BUILD_TIMESTAMP';
+// Paths resolve against this sw.js's URL, so they work whether the app is
+// served at /tasknari/ (GitHub Pages) or / (localhost).
 const ASSETS = [
-  '/tasknari/',
-  '/tasknari/index.html',
-  '/tasknari/manifest.json',
-  '/tasknari/icon-192.png',
-  '/tasknari/icon-512.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 // Cache all assets first, THEN skip waiting — order matters
