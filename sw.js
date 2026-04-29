@@ -33,8 +33,19 @@ self.addEventListener('activate', e => {
   );
 });
 
+// Stale-while-revalidate: return the cached response immediately when
+// available, but always kick off a background fetch and update the cache so
+// the next reload gets fresh content. Falls back gracefully when offline.
 self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    caches.open(CACHE).then(async cache => {
+      const cached = await cache.match(e.request);
+      const network = fetch(e.request).then(resp => {
+        if (resp && resp.ok) cache.put(e.request, resp.clone());
+        return resp;
+      }).catch(() => cached);
+      return cached || network;
+    })
   );
 });
