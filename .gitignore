@@ -1,0 +1,6 @@
+# Local Claude Code MCP config (uses ${TWENTY_FIRST_API_KEY} env var)
+.mcp.json
+
+# Python build artifacts (legacy)
+__pycache__/
+*.pyc
