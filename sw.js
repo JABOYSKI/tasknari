@@ -1,4 +1,4 @@
-const CACHE = 'tasknari-~0,12';
+const CACHE = 'tasknari-202606030919';
 // Paths resolve against this sw.js's URL, so they work whether the app is
 // served at /tasknari/ (GitHub Pages) or / (localhost).
 const ASSETS = [

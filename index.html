@@ -748,7 +748,7 @@
     <button id="splashConfirm" class="btn btn-primary" style="width:100%;margin-top:4px">Log In</button>
     <button id="splashOffline" class="btn hidden" style="width:100%;margin-top:8px;background:transparent;border-color:var(--border);color:var(--muted-color)">Work Offline (use last saved data)</button>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
-      <div style="font-size:.72rem;color:#8d9eb0">updated Apr 29 2026 16:22:53</div>
+      <div style="font-size:.72rem;color:#8d9eb0">updated Jun 3, 2026 09:19:37</div>
       <button id="splashCheckUpdate" style="background:none;border:none;font-size:.72rem;color:#8d9eb0;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px">Check for update</button>
     </div>
   </div>
@@ -2668,9 +2668,15 @@
       });
       if('serviceWorker' in navigator){
       let refreshing = false;
+      // A first visit loads with NO controlling SW. The SW's first activation
+      // posts SW_UPDATED; reloading then just makes the login screen flash
+      // twice. Only treat SW_UPDATED as a real update when a SW already
+      // controlled this page at load.
+      const hadController = !!navigator.serviceWorker.controller;
       // SW explicitly messages the page after it activates and has new content ready
       navigator.serviceWorker.addEventListener('message', e => {
         if(e.data && e.data.type === 'SW_UPDATED' && !refreshing){
+          if(!hadController) return;   // first install -> nothing to reload onto
           refreshing = true;
           document.body.style.transition='opacity 0.3s ease';
           document.body.style.opacity='0';
